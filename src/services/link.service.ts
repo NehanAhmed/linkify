@@ -6,6 +6,7 @@ import { eq, and, isNull } from 'drizzle-orm'
 import { AppError } from '../utils/AppError'
 import { env } from '../utils/env'
 import type { UpdateLinkSettingsInput } from '../validators/link.validators'
+import { logAction } from './audit.service'
 
 const LINK_CHAIN_MAX_HOPS = 5
 const JWT_SECRET = new TextEncoder().encode(env.LINK_ACCESS_SECRET)
@@ -27,6 +28,8 @@ export async function setPassword(code: string, userId: string, password: string
 
   const passwordHash = await bcrypt.hash(password, 12)
   await db.update(urls).set({ passwordHash }).where(eq(urls.code, code))
+
+  await logAction(userId, 'url.password_set', 'url', code)
 }
 
 export async function removePassword(code: string, userId: string) {
@@ -44,6 +47,8 @@ export async function removePassword(code: string, userId: string) {
   }
 
   await db.update(urls).set({ passwordHash: null }).where(eq(urls.code, code))
+
+  await logAction(userId, 'url.password_removed', 'url', code)
 }
 
 export async function verifyPasswordReturnToken(code: string, password: string): Promise<string> {

@@ -42,3 +42,12 @@ export const passwordLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many password attempts, please try again later' },
 })
+
+export const authLimiter = rateLimit({
+  windowMs: env.AUTH_RATE_LIMIT_WINDOW_MS,
+  max: env.AUTH_RATE_LIMIT_MAX,
+  keyGenerator: standardKey,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later' },
+})

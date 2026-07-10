@@ -9,6 +9,7 @@ import {
 import * as urlService from '../services/url.services'
 import { verifyLinkAccessToken, resolveChain } from '../services/link.service'
 import { AppError } from '../utils/AppError'
+import { logActionFromReq } from '../services/audit.service'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -141,6 +142,7 @@ export async function purgeUrl(req: Request, res: Response, next: NextFunction) 
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
     await urlService.purgeUrl(code, req.user!.id, req.user!.role === 'admin')
+    await logActionFromReq(req, 'url.purged', 'url', code)
     res.json({ success: true, message: 'URL permanently deleted' })
   } catch (err) {
     next(err)

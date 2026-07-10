@@ -1,9 +1,19 @@
-import { pgTable, serial, text, timestamp, integer, index, uuid, boolean, uniqueIndex, primaryKey } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, timestamp, integer, index, uuid, boolean, uniqueIndex, primaryKey, jsonb } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   email: text('email'),
   role: text('role').default('user').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const refreshTokens = pgTable('refresh_tokens', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
@@ -15,6 +25,7 @@ export const apiKeys = pgTable('api_keys', {
   keyHash: text('key_hash').notNull(),
   name: text('name').notNull(),
   scopes: text('scopes').array(),
+  allowedIps: text('allowed_ips').array(),
   lastUsedAt: timestamp('last_used_at'),
   expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -58,6 +69,8 @@ export const visits = pgTable(
     browser: text('browser'),
     browserVersion: text('browser_version'),
     referrerCategory: text('referrer_category'),
+    isBot: boolean('is_bot').default(false).notNull(),
+    fingerprint: text('fingerprint'),
     visitedAt: timestamp('visited_at').defaultNow().notNull(),
   },
   (table) => ({
@@ -136,5 +149,25 @@ export const urlTags = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.urlCode, table.tagId] }),
     tagIdIdx: index('url_tags_tag_id_idx').on(table.tagId),
+  }),
+)
+
+export const auditLog = pgTable(
+  'audit_log',
+  {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    action: text('action').notNull(),
+    resource: text('resource').notNull(),
+    resourceId: text('resource_id'),
+    metadata: jsonb('metadata'),
+    ipAddress: text('ip_address'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('audit_log_user_id_idx').on(table.userId),
+    actionIdx: index('audit_log_action_idx').on(table.action),
+    createdAtIdx: index('audit_log_created_at_idx').on(table.createdAt),
   }),
 )

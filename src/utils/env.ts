@@ -16,6 +16,10 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SENTRY_DSN: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  ENCRYPTION_KEY: z.string().default(() => randomBytes(32).toString('hex')),
+  AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
+  CSRF_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
 })
 
 function validateEnv() {

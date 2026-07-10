@@ -12,6 +12,9 @@ import { AppError } from '../utils/AppError'
 import { env } from '../utils/env'
 import type { CreateUrlInput, CreateUrlBulkInput, ListUrlsQueryInput } from '../validators/url.validators'
 import bcrypt from 'bcrypt'
+import { isBot } from '../utils/botDetection'
+import { createFingerprint } from '../utils/fingerprint'
+import { encrypt, decrypt } from '../utils/encryption'
 
 const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
@@ -117,10 +120,17 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
   const ua = parseUserAgent(metadata.userAgent)
   const geo = lookupGeo(metadata.ipAddress)
   const referrerCategory = classifyReferrer(metadata.referer)
+  const botResult = isBot(metadata.userAgent, metadata.ipAddress)
+  const fingerprint = createFingerprint(metadata.ipAddress, metadata.userAgent, undefined)
+
+  let encryptedIp: string | null = null
+  if (metadata.ipAddress) {
+    encryptedIp = encrypt(metadata.ipAddress)
+  }
 
   await db.insert(visits).values({
     code,
-    ipAddress: metadata.ipAddress || null,
+    ipAddress: encryptedIp,
     userAgent: metadata.userAgent || null,
     referer: metadata.referer || null,
     country: geo.country,
@@ -131,6 +141,8 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     browser: ua.browser,
     browserVersion: ua.browserVersion,
     referrerCategory,
+    isBot: botResult.isBot,
+    fingerprint: fingerprint || null,
   })
 
   await db.update(urls).set({ visits: sql`visits + 1` }).where(eq(urls.code, code))
@@ -142,7 +154,7 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     .where(
       and(
         eq(visits.code, code),
-        eq(visits.ipAddress, metadata.ipAddress || ''),
+        eq(visits.fingerprint, fingerprint),
         gte(visits.visitedAt, windowStart),
       ),
     )
@@ -175,7 +187,7 @@ export async function getUrlVisits(code: string, page: number, limit: number) {
     visits: rows.map((v) => ({
       id: v.id,
       code: v.code,
-      ipAddress: v.ipAddress,
+      ipAddress: null,
       userAgent: v.userAgent,
       referer: v.referer,
       country: v.country,
@@ -185,6 +197,7 @@ export async function getUrlVisits(code: string, page: number, limit: number) {
       browser: v.browser,
       browserVersion: v.browserVersion,
       referrerCategory: v.referrerCategory,
+      isBot: v.isBot,
       visitedAt: v.visitedAt.toISOString(),
     })),
     pagination: {
@@ -256,7 +269,7 @@ export async function exportUrlVisits(code: string): Promise<string> {
   const headers = [
     'id', 'code', 'ip_address', 'user_agent', 'referer',
     'country', 'city', 'device_type', 'os', 'browser',
-    'browser_version', 'referrer_category', 'visited_at',
+    'browser_version', 'referrer_category', 'is_bot', 'visited_at',
   ]
 
   const csvRows = [headers.join(',')]
@@ -266,7 +279,7 @@ export async function exportUrlVisits(code: string): Promise<string> {
       [
         v.id,
         v.code,
-        escapeCsv(v.ipAddress),
+        '',
         escapeCsv(v.userAgent),
         escapeCsv(v.referer),
         escapeCsv(v.country),
@@ -276,6 +289,7 @@ export async function exportUrlVisits(code: string): Promise<string> {
         escapeCsv(v.browser),
         escapeCsv(v.browserVersion),
         escapeCsv(v.referrerCategory),
+        v.isBot ? 'true' : 'false',
         v.visitedAt.toISOString(),
       ].join(','),
     )

@@ -1,11 +1,13 @@
 import express from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 import pinoHttp from 'pino-http'
 import * as Sentry from '@sentry/node'
 import routes from './routes'
 import { rootRedirect } from './controllers/url.controllers'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
+import { csrfProtection } from './middleware/csrf'
 import { logger } from './utils/logger'
 import { env } from './utils/env'
 
@@ -25,9 +27,11 @@ const allowedOrigins = env.CORS_ORIGINS
 
 app.use(helmet())
 app.use(cors({ origin: allowedOrigins }))
+app.use(cookieParser())
 app.use(pinoHttp({ logger }))
 app.use(express.json({ limit: '1mb' }))
 app.disable('x-powered-by')
+app.use('/api', csrfProtection)
 
 app.use(routes)
 

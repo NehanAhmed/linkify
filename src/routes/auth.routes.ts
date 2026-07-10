@@ -1,15 +1,17 @@
 import { Router } from 'express'
 import * as authController from '../controllers/auth.controller'
 import { requireAuth } from '../middleware/auth'
-import { strictLimiter } from '../middleware/rateLimiter'
+import { authLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.post('/refresh', strictLimiter, authController.refreshToken)
-router.post('/reset-password', strictLimiter, authController.resetPassword)
+router.get('/csrf-token', authController.getCsrfToken)
+router.post('/refresh', authLimiter, authController.refreshToken)
+router.post('/reset-password', authLimiter, authController.resetPassword)
 router.get('/me', requireAuth, authController.getUserProfile)
-router.post('/api-keys', requireAuth, authController.createApiKey)
+router.post('/api-keys', authLimiter, requireAuth, authController.createApiKey)
 router.get('/api-keys', requireAuth, authController.listApiKeys)
-router.delete('/api-keys/:id', requireAuth, authController.revokeApiKey)
+router.put('/api-keys/:id', authLimiter, requireAuth, authController.updateApiKey)
+router.delete('/api-keys/:id', authLimiter, requireAuth, authController.revokeApiKey)
 
 export default router

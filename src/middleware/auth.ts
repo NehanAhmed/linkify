@@ -8,6 +8,7 @@ import { eq, or, isNull, gt } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import type { AuthenticatedUser, UserRole } from '../types/auth.types'
 import { syncUser } from '../services/auth.services'
+import { isIpAllowed } from './ipAllowlist'
 
 let jwks: ReturnType<typeof createRemoteJWKSet> | null = null
 
@@ -33,7 +34,7 @@ async function verifyJwt(token: string): Promise<AuthenticatedUser> {
   return { id: userId, email, role, aal }
 }
 
-async function verifyApiKey(token: string): Promise<AuthenticatedUser> {
+async function verifyApiKey(token: string, ip?: string): Promise<AuthenticatedUser> {
   const keys = await db
     .select()
     .from(apiKeys)
@@ -44,6 +45,12 @@ async function verifyApiKey(token: string): Promise<AuthenticatedUser> {
   for (const key of keys) {
     const match = await bcrypt.compare(token, key.keyHash)
     if (!match) continue
+
+    if (key.allowedIps && key.allowedIps.length > 0 && ip) {
+      if (!isIpAllowed(ip, key.allowedIps)) {
+        throw new AppError('Access from this IP is not allowed', 403, 'IP_NOT_ALLOWED')
+      }
+    }
 
     db.update(apiKeys)
       .set({ lastUsedAt: new Date() })
@@ -73,7 +80,7 @@ export async function requireAuth(req: Request, _res: Response, next: NextFuncti
     if (isJwt) {
       req.user = await verifyJwt(token)
     } else {
-      req.user = await verifyApiKey(token)
+      req.user = await verifyApiKey(token, req.ip)
     }
 
     next()

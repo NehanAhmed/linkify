@@ -4,8 +4,6 @@ dist/
 .git/
 .gitignore
 drizzle/
-src/
-tsconfig.json
 vitest.config.ts
 AGENTS.md
 FEATURES.md
