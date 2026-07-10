@@ -4,6 +4,7 @@ import {
   createUrlBulkSchema,
   getUrlParamsSchema,
   paginationSchema,
+  listUrlsQuerySchema,
 } from '../validators/url.validators'
 import * as urlService from '../services/url.services'
 
@@ -95,8 +96,8 @@ export async function exportVisits(req: Request, res: Response, next: NextFuncti
 
 export async function listUrls(req: Request, res: Response, next: NextFunction) {
   try {
-    const pagination = paginationSchema.parse(req.query)
-    const result = await urlService.listUrls(pagination.page, pagination.limit)
+    const query = listUrlsQuerySchema.parse(req.query)
+    const result = await urlService.listUrls(query)
     res.json({ success: true, data: result })
   } catch (err) {
     next(err)
@@ -107,7 +108,17 @@ export async function deleteUrl(req: Request, res: Response, next: NextFunction)
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
     await urlService.deleteUrl(code)
-    res.json({ success: true, message: 'URL deleted successfully' })
+    res.json({ success: true, message: 'URL soft deleted successfully' })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function purgeUrl(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { code } = getUrlParamsSchema.parse(req.params)
+    await urlService.purgeUrl(code)
+    res.json({ success: true, message: 'URL permanently deleted' })
   } catch (err) {
     next(err)
   }

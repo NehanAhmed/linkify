@@ -45,4 +45,5 @@ export const RESERVED_CODES = new Set([
   'links',
   'short',
   'shortener',
+  'purge',
 ])

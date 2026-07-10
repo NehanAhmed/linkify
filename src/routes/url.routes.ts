@@ -14,5 +14,6 @@ router.get('/:code/visits', urlController.getVisits)
 router.get('/:code/stats', urlController.getUrlStats)
 router.get('/:code/visits/export', urlController.exportVisits)
 router.delete('/:code', requireAuth, urlController.deleteUrl)
+router.delete('/:code/purge', requireAuth, urlController.purgeUrl)
 
 export default router
