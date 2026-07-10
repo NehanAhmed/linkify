@@ -17,7 +17,7 @@ const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
 
 export { AppError } from '../utils/AppError'
 
-export async function createShortUrl(input: CreateUrlInput) {
+export async function createShortUrl(input: CreateUrlInput, userId: string) {
   const code = input.customCode || generateShortCode()
 
   if (RESERVED_CODES.has(code.toLowerCase())) {
@@ -38,6 +38,7 @@ export async function createShortUrl(input: CreateUrlInput) {
   await db.insert(urls).values({
     code,
     url: input.url,
+    userId,
     expiresAt,
   })
 
@@ -99,7 +100,6 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
 
   await db.update(urls).set({ visits: sql`visits + 1` }).where(eq(urls.code, code))
 
-  // Unique visit check — same IP within configurable window
   const windowStart = new Date(Date.now() - UNIQUE_VISIT_WINDOW_HOURS * 3_600_000)
   const [existing] = await db
     .select({ id: visits.id })
@@ -172,7 +172,6 @@ export async function getUrlStats(code: string) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
-  // Hourly aggregation (last 7 days)
   const hourly = await db.execute<{ hour: string; count: number }>(
     sql`
       SELECT
@@ -186,7 +185,6 @@ export async function getUrlStats(code: string) {
     `,
   )
 
-  // Daily aggregation (all time)
   const daily = await db.execute<{ date: string; count: number }>(
     sql`
       SELECT
@@ -248,7 +246,6 @@ export async function exportUrlVisits(code: string): Promise<string> {
     )
   }
 
-  // BOM for Excel compatibility
   return '\uFEFF' + csvRows.join('\n')
 }
 
@@ -261,11 +258,15 @@ function escapeCsv(value: string | number | null | undefined): string {
   return str
 }
 
-export async function listUrls(query: ListUrlsQueryInput) {
+export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdmin = false) {
   const { page, limit, q, createdAfter, createdBefore, minVisits, sortBy, sortOrder } = query
   const offset = (page - 1) * limit
 
   const conditions: SQL[] = []
+
+  if (!isAdmin && userId) {
+    conditions.push(eq(urls.userId, userId))
+  }
 
   if (q) {
     const pattern = `%${q}%`
@@ -317,9 +318,9 @@ export async function listUrls(query: ListUrlsQueryInput) {
   }
 }
 
-export async function deleteUrl(code: string) {
+export async function deleteUrl(code: string, userId: string, isAdmin = false) {
   const [existing] = await db
-    .select({ deletedAt: urls.deletedAt })
+    .select({ deletedAt: urls.deletedAt, userId: urls.userId })
     .from(urls)
     .where(and(eq(urls.code, code), isNull(urls.deletedAt)))
     .limit(1)
@@ -328,10 +329,28 @@ export async function deleteUrl(code: string) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
+  if (!isAdmin && existing.userId !== userId) {
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
+  }
+
   await db.update(urls).set({ deletedAt: new Date() }).where(eq(urls.code, code))
 }
 
-export async function purgeUrl(code: string) {
+export async function purgeUrl(code: string, userId: string, isAdmin = false) {
+  const [existing] = await db
+    .select({ userId: urls.userId })
+    .from(urls)
+    .where(eq(urls.code, code))
+    .limit(1)
+
+  if (!existing) {
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
+  }
+
+  if (!isAdmin && existing.userId !== userId) {
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
+  }
+
   const result = await db.delete(urls).where(eq(urls.code, code)).returning()
   if (result.length === 0) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
@@ -348,11 +367,11 @@ export async function purgeExpiredUrls(daysOld: number = 30) {
   return result.map((r) => r.code)
 }
 
-export async function createShortUrlBulk(input: CreateUrlBulkInput) {
+export async function createShortUrlBulk(input: CreateUrlBulkInput, userId: string) {
   const results = await Promise.allSettled(
     input.urls.map(async (item, index) => {
       try {
-        const data = await createShortUrl(item)
+        const data = await createShortUrl(item, userId)
         return { index, success: true as const, data }
       } catch (err) {
         const message = err instanceof AppError
