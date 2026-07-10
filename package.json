@@ -22,7 +22,9 @@
     "drizzle-orm": "^0.45.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.5.2",
+    "geoip-lite": "^2.0.3",
     "helmet": "^8.2.0",
+    "ua-parser-js": "^2.0.10",
     "zod": "^3.24.4"
   },
   "devDependencies": {
