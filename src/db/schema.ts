@@ -9,6 +9,7 @@ export const urls = pgTable('urls', {
   visits: integer('visits').default(0).notNull(),
   uniqueVisits: integer('unique_visits').default(0).notNull(),
   expiresAt: timestamp('expires_at'),
+  deletedAt: timestamp('deleted_at'),
   lastCheckedAt: timestamp('last_checked_at'),
   lastStatusCode: integer('last_status_code'),
   createdAt: timestamp('created_at').defaultNow().notNull(),

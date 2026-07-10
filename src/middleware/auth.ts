@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
 import { AppError } from '../utils/AppError'
+import { env } from '../utils/env'
 
-const API_KEY = process.env.API_KEY
+const API_KEY = env.API_KEY
 
 export function requireAuth(req: Request, _res: Response, next: NextFunction) {
   if (!API_KEY) {

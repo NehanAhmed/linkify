@@ -1,12 +1,16 @@
 import type { Request, Response, NextFunction } from 'express'
 import { ZodError } from 'zod'
 import { AppError } from '../utils/AppError'
+import { logger } from '../utils/logger'
 
-export function errorHandler(err: Error, _req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: Error, req: Request, res: Response, _next: NextFunction) {
+  const requestId = (req as any).id
+
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,
       error: err.message,
+      ...(requestId ? { requestId } : {}),
     })
     return
   }
@@ -19,14 +23,16 @@ export function errorHandler(err: Error, _req: Request, res: Response, _next: Ne
         field: e.path.join('.'),
         message: e.message,
       })),
+      ...(requestId ? { requestId } : {}),
     })
     return
   }
 
-  console.error('Unhandled error:', err)
+  logger.error({ err, requestId }, 'Unhandled error')
   res.status(500).json({
     success: false,
     error: 'Internal server error',
+    ...(requestId ? { requestId } : {}),
   })
 }
 

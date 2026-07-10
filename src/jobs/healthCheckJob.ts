@@ -2,27 +2,25 @@ import { db } from '../db'
 import { urls } from '../db/schema'
 import { eq, and, or, isNull, lt, sql } from 'drizzle-orm'
 import { checkLink } from '../services/healthCheck'
+import { logger } from '../utils/logger'
 
 const BATCH_SIZE = 20
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null
 
-export function startHealthCheckJob(intervalMs?: number): void {
-  const interval = intervalMs ?? (Number(process.env.HEALTH_CHECK_INTERVAL_MS) || 3_600_000)
-
-  if (interval <= 0) return
+export function startHealthCheckJob(intervalMs: number): void {
+  if (intervalMs <= 0) return
 
   const run = async () => {
     try {
       await processBatch()
     } catch (err) {
-      console.error('Health check job error:', err)
+      logger.error({ err }, 'Health check job error')
     }
   }
 
-  // Run immediately on start, then on interval
   run()
-  intervalHandle = setInterval(run, interval)
+  intervalHandle = setInterval(run, intervalMs)
 }
 
 export function stopHealthCheckJob(): void {
@@ -65,6 +63,6 @@ async function processBatch(): Promise<void> {
 
   const failed = results.filter((r) => r.status === 'rejected').length
   if (failed > 0) {
-    console.warn(`Health check: ${failed}/${rows.length} updates failed`)
+    logger.warn({ checked: rows.length, failed }, 'Health check partial failure')
   }
 }

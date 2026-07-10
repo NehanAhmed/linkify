@@ -1,6 +1,6 @@
 import { db } from '../db'
 import { urls, visits } from '../db/schema'
-import { eq, desc, count, sql, and, gte, lte } from 'drizzle-orm'
+import { eq, desc, count, sql, and, gte, isNull, type SQL } from 'drizzle-orm'
 import { generateShortCode } from '../utils/codeGenerator'
 import { RESERVED_CODES } from '../constants/reservedWords'
 import { fetchLinkPreview } from './linkPreview'
@@ -9,10 +9,11 @@ import { parseUserAgent } from './userAgent'
 import { classifyReferrer } from '../utils/referrerClassifier'
 import { lookupGeo } from './geoip'
 import { AppError } from '../utils/AppError'
-import type { CreateUrlInput, CreateUrlBulkInput } from '../validators/url.validators'
+import { env } from '../utils/env'
+import type { CreateUrlInput, CreateUrlBulkInput, ListUrlsQueryInput } from '../validators/url.validators'
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000'
-const UNIQUE_VISIT_WINDOW_HOURS = Number(process.env.UNIQUE_VISIT_WINDOW_HOURS) || 24
+const BASE_URL = env.BASE_URL
+const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
 
 export { AppError } from '../utils/AppError'
 
@@ -59,7 +60,11 @@ export async function createShortUrl(input: CreateUrlInput) {
 }
 
 export async function resolveUrl(code: string) {
-  const result = await db.select().from(urls).where(eq(urls.code, code)).limit(1)
+  const result = await db
+    .select()
+    .from(urls)
+    .where(and(eq(urls.code, code), isNull(urls.deletedAt)))
+    .limit(1)
   const row = result[0]
   if (!row) {
     throw new AppError('URL not found', 404)
@@ -256,18 +261,48 @@ function escapeCsv(value: string | number | null | undefined): string {
   return str
 }
 
-export async function listUrls(page: number, limit: number) {
+export async function listUrls(query: ListUrlsQueryInput) {
+  const { page, limit, q, createdAfter, createdBefore, minVisits, sortBy, sortOrder } = query
   const offset = (page - 1) * limit
 
-  const [totalResult] = await db.select({ total: count() }).from(urls)
+  const conditions: SQL[] = []
+
+  if (q) {
+    const pattern = `%${q}%`
+    conditions.push(
+      sql`(${urls.url} ILIKE ${pattern} OR ${urls.code} ILIKE ${pattern})`,
+    )
+  }
+
+  if (createdAfter) {
+    conditions.push(sql`${urls.createdAt} >= ${new Date(createdAfter)}`)
+  }
+
+  if (createdBefore) {
+    conditions.push(sql`${urls.createdAt} <= ${new Date(createdBefore)}`)
+  }
+
+  if (minVisits !== undefined) {
+    conditions.push(sql`${urls.visits} >= ${minVisits}`)
+  }
+
+  conditions.push(isNull(urls.deletedAt))
+
+  const where = conditions.length > 0 ? and(...conditions) : undefined
+
+  const [totalResult] = where
+    ? await db.select({ total: count() }).from(urls).where(where)
+    : await db.select({ total: count() }).from(urls)
   const total = totalResult?.total ?? 0
 
-  const rows = await db
-    .select()
-    .from(urls)
-    .orderBy(desc(urls.createdAt))
-    .limit(limit)
-    .offset(offset)
+  const orderColumn = sortBy === 'createdAt' ? urls.createdAt
+    : sortBy === 'visits' ? urls.visits
+    : urls.code
+  const order = sortOrder === 'asc' ? sql`${orderColumn} ASC` : sql`${orderColumn} DESC`
+
+  const rows = where
+    ? await db.select().from(urls).where(where).orderBy(order).limit(limit).offset(offset)
+    : await db.select().from(urls).orderBy(order).limit(limit).offset(offset)
 
   return {
     urls: rows.map((u) => formatUrlResponse(
@@ -283,10 +318,34 @@ export async function listUrls(page: number, limit: number) {
 }
 
 export async function deleteUrl(code: string) {
+  const [existing] = await db
+    .select({ deletedAt: urls.deletedAt })
+    .from(urls)
+    .where(and(eq(urls.code, code), isNull(urls.deletedAt)))
+    .limit(1)
+
+  if (!existing) {
+    throw new AppError('URL not found', 404)
+  }
+
+  await db.update(urls).set({ deletedAt: new Date() }).where(eq(urls.code, code))
+}
+
+export async function purgeUrl(code: string) {
   const result = await db.delete(urls).where(eq(urls.code, code)).returning()
   if (result.length === 0) {
     throw new AppError('URL not found', 404)
   }
+}
+
+export async function purgeExpiredUrls(daysOld: number = 30) {
+  const cutoff = new Date(Date.now() - daysOld * 86_400_000)
+  const result = await db
+    .delete(urls)
+    .where(and(sql`${urls.deletedAt} IS NOT NULL`, sql`${urls.deletedAt} < ${cutoff}`))
+    .returning({ code: urls.code })
+
+  return result.map((r) => r.code)
 }
 
 export async function createShortUrlBulk(input: CreateUrlBulkInput) {

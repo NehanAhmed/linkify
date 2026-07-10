@@ -1,8 +1,9 @@
 import rateLimit from 'express-rate-limit'
 import type { Request } from 'express'
+import { env } from '../utils/env'
 
-const windowMs = Number(process.env.RATE_LIMIT_WINDOW_MS) || 60_000
-const generalMax = Number(process.env.RATE_LIMIT_MAX) || 100
+const windowMs = env.RATE_LIMIT_WINDOW_MS
+const generalMax = env.RATE_LIMIT_MAX
 
 const standardKey = (req: Request) => req.ip ?? 'unknown'
 
