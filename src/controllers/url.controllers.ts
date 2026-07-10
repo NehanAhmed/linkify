@@ -7,6 +7,8 @@ import {
   listUrlsQuerySchema,
 } from '../validators/url.validators'
 import * as urlService from '../services/url.services'
+import { verifyLinkAccessToken, resolveChain } from '../services/link.service'
+import { AppError } from '../utils/AppError'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -38,6 +40,23 @@ export async function redirectUrl(req: Request, res: Response, next: NextFunctio
   }
 }
 
+export async function verifyPasswordRedirect(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { code } = getUrlParamsSchema.parse(req.params)
+    const token = req.query.token as string | undefined
+    if (!token) {
+      throw new AppError('Access token required', 401, 'ACCESS_TOKEN_REQUIRED')
+    }
+    const resolvedCode = await verifyLinkAccessToken(token)
+    if (resolvedCode !== code) {
+      throw new AppError('Token does not match this link', 403, 'TOKEN_MISMATCH')
+    }
+    await performRedirect(code, req, res)
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function getUrlInfo(req: Request, res: Response, next: NextFunction) {
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
@@ -53,6 +72,8 @@ export async function getUrlInfo(req: Request, res: Response, next: NextFunction
         visits: url.visits,
         uniqueVisits: url.uniqueVisits,
         expiresAt: url.expiresAt?.toISOString() ?? null,
+        activeAt: url.activeAt?.toISOString() ?? null,
+        hasPassword: !!url.passwordHash,
         createdAt: url.createdAt.toISOString(),
       },
     })
@@ -138,11 +159,26 @@ export async function rootRedirect(req: Request, res: Response, next: NextFuncti
 async function performRedirect(code: string, req: Request, res: Response) {
   const url = await urlService.resolveUrl(code)
 
+  if (url.passwordHash) {
+    const token = req.query.token as string | undefined
+    if (!token) {
+      res.status(401).json({
+        success: false,
+        error: 'This link is password protected. POST /:code/verify-password to get an access token.',
+        code: 'LINK_PASSWORD_REQUIRED',
+      })
+      return
+    }
+    await verifyLinkAccessToken(token)
+  }
+
+  const targetUrl = await resolveChain(url.url)
+
   urlService.recordVisit(code, {
     ipAddress: req.ip,
     userAgent: req.headers['user-agent'],
     referer: req.headers['referer'],
   }).catch(() => {})
 
-  res.redirect(301, url.url)
+  res.redirect(301, targetUrl)
 }
