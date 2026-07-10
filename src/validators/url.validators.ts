@@ -55,7 +55,12 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 })
 
+export const statsQuerySchema = z.object({
+  period: z.enum(['24h', '7d', '30d', 'all']).default('7d'),
+})
+
 export type CreateUrlInput = z.infer<typeof createUrlSchema>
 export type CreateUrlBulkInput = z.infer<typeof createUrlBulkSchema>
 export type GetUrlParams = z.infer<typeof getUrlParamsSchema>
 export type PaginationInput = z.infer<typeof paginationSchema>
+export type StatsQueryInput = z.infer<typeof statsQuerySchema>
