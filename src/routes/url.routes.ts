@@ -3,6 +3,7 @@ import * as urlController from '../controllers/url.controllers'
 
 const router = Router()
 
+router.post('/bulk', urlController.createUrlBulk)
 router.post('/', urlController.createUrl)
 router.get('/', urlController.listUrls)
 router.get('/:code', urlController.redirectUrl)
