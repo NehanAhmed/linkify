@@ -29,7 +29,21 @@ export interface VisitResponse {
   ipAddress: string | null
   userAgent: string | null
   referer: string | null
+  country: string | null
+  city: string | null
+  deviceType: string | null
+  os: string | null
+  browser: string | null
+  browserVersion: string | null
+  referrerCategory: string | null
   visitedAt: string
+}
+
+export interface UrlStatsResponse {
+  totalVisits: number
+  uniqueVisits: number
+  hourly: Array<{ hour: string; count: number }>
+  daily: Array<{ date: string; count: number }>
 }
 
 export interface ApiResponse<T = unknown> {

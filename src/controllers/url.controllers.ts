@@ -50,6 +50,7 @@ export async function getUrlInfo(req: Request, res: Response, next: NextFunction
         description: url.description,
         image: url.image,
         visits: url.visits,
+        uniqueVisits: url.uniqueVisits,
         expiresAt: url.expiresAt?.toISOString() ?? null,
         createdAt: url.createdAt.toISOString(),
       },
@@ -65,6 +66,28 @@ export async function getVisits(req: Request, res: Response, next: NextFunction)
     const pagination = paginationSchema.parse(req.query)
     const result = await urlService.getUrlVisits(code, pagination.page, pagination.limit)
     res.json({ success: true, data: result })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getUrlStats(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { code } = getUrlParamsSchema.parse(req.params)
+    const stats = await urlService.getUrlStats(code)
+    res.json({ success: true, data: stats })
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function exportVisits(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { code } = getUrlParamsSchema.parse(req.params)
+    const csv = await urlService.exportUrlVisits(code)
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${code}-visits.csv"`)
+    res.send(csv)
   } catch (err) {
     next(err)
   }
