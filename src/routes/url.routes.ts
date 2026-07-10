@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import * as urlController from '../controllers/url.controllers'
 import { requireAuth } from '../middleware/auth'
+import { requireAAL } from '../middleware/requireAAL'
 import { strictLimiter, bulkLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
@@ -14,6 +15,6 @@ router.get('/:code/visits', urlController.getVisits)
 router.get('/:code/stats', urlController.getUrlStats)
 router.get('/:code/visits/export', urlController.exportVisits)
 router.delete('/:code', requireAuth, urlController.deleteUrl)
-router.delete('/:code/purge', requireAuth, urlController.purgeUrl)
+router.delete('/:code/purge', requireAuth, requireAAL(), urlController.purgeUrl)
 
 export default router

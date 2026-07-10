@@ -21,6 +21,7 @@
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
     "@sentry/node": "^10.65.0",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
@@ -28,12 +29,14 @@
     "express-rate-limit": "^8.5.2",
     "geoip-lite": "^2.0.3",
     "helmet": "^8.2.0",
+    "jose": "^6.2.3",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
     "ua-parser-js": "^2.0.10",
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/geoip-lite": "^1.4.4",
@@ -46,5 +49,11 @@
     "tsx": "^4.23.0",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "esbuild"
+    ]
   }
 }

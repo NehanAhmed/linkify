@@ -1,4 +1,24 @@
-import { pgTable, serial, text, timestamp, integer, index } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, timestamp, integer, index, uuid } from 'drizzle-orm/pg-core'
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey(),
+  email: text('email'),
+  role: text('role').default('user').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
+
+export const apiKeys = pgTable('api_keys', {
+  id: serial('id').primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  keyHash: text('key_hash').notNull(),
+  name: text('name').notNull(),
+  scopes: text('scopes').array(),
+  lastUsedAt: timestamp('last_used_at'),
+  expiresAt: timestamp('expires_at'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+})
 
 export const urls = pgTable('urls', {
   code: text('code').primaryKey(),
@@ -8,6 +28,8 @@ export const urls = pgTable('urls', {
   image: text('image'),
   visits: integer('visits').default(0).notNull(),
   uniqueVisits: integer('unique_visits').default(0).notNull(),
+  userId: uuid('user_id')
+    .references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: timestamp('expires_at'),
   deletedAt: timestamp('deleted_at'),
   lastCheckedAt: timestamp('last_checked_at'),

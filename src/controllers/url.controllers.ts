@@ -11,7 +11,7 @@ import * as urlService from '../services/url.services'
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
     const input = createUrlSchema.parse(req.body)
-    const result = await urlService.createShortUrl(input)
+    const result = await urlService.createShortUrl(input, req.user!.id)
     res.status(201).json({ success: true, data: result })
   } catch (err) {
     next(err)
@@ -21,7 +21,7 @@ export async function createUrl(req: Request, res: Response, next: NextFunction)
 export async function createUrlBulk(req: Request, res: Response, next: NextFunction) {
   try {
     const input = createUrlBulkSchema.parse(req.body)
-    const results = await urlService.createShortUrlBulk(input)
+    const results = await urlService.createShortUrlBulk(input, req.user!.id)
     const hasError = results.some((r) => !r.success)
     res.status(hasError ? 207 : 201).json({ success: true, data: results })
   } catch (err) {
@@ -97,7 +97,9 @@ export async function exportVisits(req: Request, res: Response, next: NextFuncti
 export async function listUrls(req: Request, res: Response, next: NextFunction) {
   try {
     const query = listUrlsQuerySchema.parse(req.query)
-    const result = await urlService.listUrls(query)
+    const userId = req.user!.id
+    const isAdmin = req.user!.role === 'admin'
+    const result = await urlService.listUrls(query, userId, isAdmin)
     res.json({ success: true, data: result })
   } catch (err) {
     next(err)
@@ -107,7 +109,7 @@ export async function listUrls(req: Request, res: Response, next: NextFunction) 
 export async function deleteUrl(req: Request, res: Response, next: NextFunction) {
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
-    await urlService.deleteUrl(code)
+    await urlService.deleteUrl(code, req.user!.id, req.user!.role === 'admin')
     res.json({ success: true, message: 'URL soft deleted successfully' })
   } catch (err) {
     next(err)
@@ -117,7 +119,7 @@ export async function deleteUrl(req: Request, res: Response, next: NextFunction)
 export async function purgeUrl(req: Request, res: Response, next: NextFunction) {
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
-    await urlService.purgeUrl(code)
+    await urlService.purgeUrl(code, req.user!.id, req.user!.role === 'admin')
     res.json({ success: true, message: 'URL permanently deleted' })
   } catch (err) {
     next(err)
