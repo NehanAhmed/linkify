@@ -8,30 +8,30 @@ export async function validateUrlSafety(rawUrl: string): Promise<void> {
   try {
     parsed = new URL(rawUrl)
   } catch {
-    throw new AppError('Invalid URL', 400)
+    throw new AppError('Invalid URL', 400, 'INVALID_URL')
   }
 
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new AppError('Only http and https URLs are allowed', 400)
+    throw new AppError('Only http and https URLs are allowed', 400, 'INVALID_PROTOCOL')
   }
 
   const hostname = parsed.hostname.toLowerCase()
 
   if (isIP(hostname)) {
     if (isPrivateIP(hostname)) {
-      throw new AppError('URLs pointing to private networks are not allowed', 400)
+      throw new AppError('URLs pointing to private networks are not allowed', 400, 'PRIVATE_IP')
     }
     return
   }
 
   const domain = getETLDPlus1(hostname)
   if (domain && BLOCKLIST_TLDS.has(domain)) {
-    throw new AppError('This domain has been blocked for security reasons', 400)
+    throw new AppError('This domain has been blocked for security reasons', 400, 'BLOCKED_DOMAIN')
   }
 
   for (const pattern of BLOCKLIST_PATTERNS) {
     if (pattern.test(hostname)) {
-      throw new AppError('This URL appears to be suspicious and has been blocked', 400)
+      throw new AppError('This URL appears to be suspicious and has been blocked', 400, 'SUSPICIOUS_URL')
     }
   }
 
@@ -39,7 +39,7 @@ export async function validateUrlSafety(rawUrl: string): Promise<void> {
     const addresses = await dnsLookup(hostname, { all: true })
     for (const addr of addresses) {
       if (isPrivateIP(addr.address)) {
-        throw new AppError('URLs pointing to private networks are not allowed', 400)
+        throw new AppError('URLs pointing to private networks are not allowed', 400, 'PRIVATE_IP')
       }
     }
   } catch {

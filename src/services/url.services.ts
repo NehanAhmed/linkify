@@ -21,14 +21,14 @@ export async function createShortUrl(input: CreateUrlInput) {
   const code = input.customCode || generateShortCode()
 
   if (RESERVED_CODES.has(code.toLowerCase())) {
-    throw new AppError('This code is reserved and cannot be used', 409)
+    throw new AppError('This code is reserved and cannot be used', 409, 'RESERVED_CODE')
   }
 
   await validateUrlSafety(input.url)
 
   const existing = await db.select().from(urls).where(eq(urls.code, code)).limit(1)
   if (existing.length > 0) {
-    throw new AppError('Code already taken', 409)
+    throw new AppError('Code already taken', 409, 'CODE_TAKEN')
   }
 
   const expiresAt = input.ttlDays
@@ -67,11 +67,11 @@ export async function resolveUrl(code: string) {
     .limit(1)
   const row = result[0]
   if (!row) {
-    throw new AppError('URL not found', 404)
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
   if (row.expiresAt && row.expiresAt < new Date()) {
-    throw new AppError('This link has expired', 410)
+    throw new AppError('This link has expired', 410, 'LINK_EXPIRED')
   }
 
   return row
@@ -169,7 +169,7 @@ export async function getUrlStats(code: string) {
     .limit(1)
 
   if (!urlRow) {
-    throw new AppError('URL not found', 404)
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
   // Hourly aggregation (last 7 days)
@@ -325,7 +325,7 @@ export async function deleteUrl(code: string) {
     .limit(1)
 
   if (!existing) {
-    throw new AppError('URL not found', 404)
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
   await db.update(urls).set({ deletedAt: new Date() }).where(eq(urls.code, code))
@@ -334,7 +334,7 @@ export async function deleteUrl(code: string) {
 export async function purgeUrl(code: string) {
   const result = await db.delete(urls).where(eq(urls.code, code)).returning()
   if (result.length === 0) {
-    throw new AppError('URL not found', 404)
+    throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 }
 

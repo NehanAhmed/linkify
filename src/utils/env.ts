@@ -18,6 +18,9 @@ const envSchema = z.object({
 function validateEnv() {
   const result = envSchema.safeParse(process.env)
   if (!result.success) {
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(`Invalid environment variables: ${result.error.message}`)
+    }
     console.error('Invalid environment variables:')
     for (const issue of result.error.issues) {
       console.error(`  - ${issue.path.join('.')}: ${issue.message}`)

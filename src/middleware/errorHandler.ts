@@ -10,6 +10,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     res.status(err.statusCode).json({
       success: false,
       error: err.message,
+      code: err.code ?? 'APP_ERROR',
       ...(requestId ? { requestId } : {}),
     })
     return
@@ -19,6 +20,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
     res.status(400).json({
       success: false,
       error: 'Validation failed',
+      code: 'VALIDATION_ERROR',
       details: err.errors.map((e) => ({
         field: e.path.join('.'),
         message: e.message,
@@ -32,6 +34,7 @@ export function errorHandler(err: Error, req: Request, res: Response, _next: Nex
   res.status(500).json({
     success: false,
     error: 'Internal server error',
+    code: 'INTERNAL_ERROR',
     ...(requestId ? { requestId } : {}),
   })
 }

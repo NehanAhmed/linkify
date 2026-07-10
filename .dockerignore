@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.git/
+.gitignore
+drizzle/
+src/
+tsconfig.json
+vitest.config.ts
+AGENTS.md
+FEATURES.md
