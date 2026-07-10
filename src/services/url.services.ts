@@ -4,6 +4,7 @@ import { eq, desc, count, sql } from 'drizzle-orm'
 import { generateShortCode } from '../utils/codeGenerator'
 import { RESERVED_CODES } from '../constants/reservedWords'
 import { fetchLinkPreview } from './linkPreview'
+import { validateUrlSafety } from './urlSafety'
 import { AppError } from '../utils/AppError'
 import type { CreateUrlInput, CreateUrlBulkInput } from '../validators/url.validators'
 
@@ -17,6 +18,8 @@ export async function createShortUrl(input: CreateUrlInput) {
   if (RESERVED_CODES.has(code.toLowerCase())) {
     throw new AppError('This code is reserved and cannot be used', 409)
   }
+
+  await validateUrlSafety(input.url)
 
   const existing = await db.select().from(urls).where(eq(urls.code, code)).limit(1)
   if (existing.length > 0) {
@@ -73,6 +76,7 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     referer: metadata.referer || null,
   })
 
+  // sql`` is safe here — "visits + 1" is a literal expression, not user input
   await db.update(urls).set({ visits: sql`visits + 1` }).where(eq(urls.code, code))
 }
 
@@ -174,17 +178,7 @@ function formatUrlResponse(
   description?: string | null,
   image?: string | null,
   createdAt?: Date,
-): {
-  code: string
-  url: string
-  shortUrl: string
-  title: string | null
-  description: string | null
-  image: string | null
-  visits: number
-  expiresAt: string | null
-  createdAt: string
-} {
+) {
   return {
     code,
     url,

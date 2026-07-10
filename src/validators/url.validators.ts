@@ -1,9 +1,6 @@
 import { z } from 'zod'
 import { RESERVED_CODES } from '../constants/reservedWords'
 
-const urlRegex =
-  /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/[\w\-./?%&=~#@!$'()*+,;:]*)?$/
-
 const codeRegex = /^[a-zA-Z0-9_-]{3,16}$/
 
 function isReserved(code: string): boolean {
@@ -15,10 +12,9 @@ export const createUrlSchema = z.object({
     .string()
     .min(1, 'URL is required')
     .max(2048, 'URL must be under 2048 characters')
-    .refine((val) => urlRegex.test(val), {
-      message: 'Invalid URL format',
-    })
+    .trim()
     .transform((val) => {
+      val = val.replace(/[\x00-\x1f\x7f]/g, '')
       if (!val.startsWith('http://') && !val.startsWith('https://')) {
         return `https://${val}`
       }
