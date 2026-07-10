@@ -1,6 +1,6 @@
 import { db } from '../db'
-import { urls, visits } from '../db/schema'
-import { eq, desc, count, sql, and, gte, isNull, type SQL } from 'drizzle-orm'
+import { urls, visits, tags, urlTags, urlCollections, collections } from '../db/schema'
+import { eq, desc, count, sql, and, gte, isNull, inArray, type SQL } from 'drizzle-orm'
 import { generateShortCode } from '../utils/codeGenerator'
 import { RESERVED_CODES } from '../constants/reservedWords'
 import { fetchLinkPreview } from './linkPreview'
@@ -11,6 +11,7 @@ import { lookupGeo } from './geoip'
 import { AppError } from '../utils/AppError'
 import { env } from '../utils/env'
 import type { CreateUrlInput, CreateUrlBulkInput, ListUrlsQueryInput } from '../validators/url.validators'
+import bcrypt from 'bcrypt'
 
 const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
@@ -35,11 +36,16 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
     ? new Date(Date.now() + input.ttlDays * 86_400_000)
     : null
 
+  const activeAt = input.activeAt ? new Date(input.activeAt) : null
+  const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
+
   await db.insert(urls).values({
     code,
     url: input.url,
     userId,
     expiresAt,
+    activeAt,
+    passwordHash,
   })
 
   fetchLinkPreview(input.url)
@@ -57,7 +63,30 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
     })
     .catch(() => {})
 
-  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined)
+  if (input.tags && input.tags.length > 0) {
+    const resolvedTags = await db
+      .select({ id: tags.id, name: tags.name })
+      .from(tags)
+      .where(and(eq(tags.userId, userId), inArray(tags.name, input.tags)))
+
+    for (const tag of resolvedTags) {
+      await db
+        .insert(urlTags)
+        .values({ urlCode: code, tagId: tag.id })
+        .onConflictDoNothing()
+        .catch(() => {})
+    }
+  }
+
+  if (input.collectionId) {
+    await db
+      .insert(urlCollections)
+      .values({ urlCode: code, collectionId: input.collectionId })
+      .onConflictDoNothing()
+      .catch(() => {})
+  }
+
+  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined, undefined, !!passwordHash, activeAt)
 }
 
 export async function resolveUrl(code: string) {
@@ -71,8 +100,14 @@ export async function resolveUrl(code: string) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
-  if (row.expiresAt && row.expiresAt < new Date()) {
+  const now = new Date()
+
+  if (row.expiresAt && row.expiresAt < now) {
     throw new AppError('This link has expired', 410, 'LINK_EXPIRED')
+  }
+
+  if (row.activeAt && row.activeAt > now) {
+    throw new AppError('This link is not yet active', 410, 'LINK_NOT_ACTIVE')
   }
 
   return row
@@ -259,7 +294,7 @@ function escapeCsv(value: string | number | null | undefined): string {
 }
 
 export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdmin = false) {
-  const { page, limit, q, createdAfter, createdBefore, minVisits, sortBy, sortOrder } = query
+  const { page, limit, q, createdAfter, createdBefore, minVisits, sortBy, sortOrder, tagIds, collectionId, hasPassword, isActive } = query
   const offset = (page - 1) * limit
 
   const conditions: SQL[] = []
@@ -287,9 +322,51 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
     conditions.push(sql`${urls.visits} >= ${minVisits}`)
   }
 
+  if (hasPassword !== undefined) {
+    if (hasPassword) {
+      conditions.push(sql`${urls.passwordHash} IS NOT NULL`)
+    } else {
+      conditions.push(sql`${urls.passwordHash} IS NULL`)
+    }
+  }
+
+  if (isActive !== undefined) {
+    const now = new Date()
+    if (isActive) {
+      conditions.push(sql`(${urls.activeAt} IS NULL OR ${urls.activeAt} <= ${now})`)
+      conditions.push(sql`(${urls.expiresAt} IS NULL OR ${urls.expiresAt} > ${now})`)
+    }
+  }
+
   conditions.push(isNull(urls.deletedAt))
 
-  const where = conditions.length > 0 ? and(...conditions) : undefined
+  let where = conditions.length > 0 ? and(...conditions) : undefined
+
+  if (tagIds && tagIds.length > 0) {
+    const tagged = await db
+      .select({ urlCode: urlTags.urlCode })
+      .from(urlTags)
+      .where(inArray(urlTags.tagId, tagIds))
+
+    const taggedCodes = [...new Set(tagged.map((t) => t.urlCode))]
+    if (taggedCodes.length === 0) {
+      return { urls: [], pagination: { page, limit, total: 0, totalPages: 0 } }
+    }
+    where = where ? and(where, inArray(urls.code, taggedCodes)) : inArray(urls.code, taggedCodes)
+  }
+
+  if (collectionId) {
+    const inCollection = await db
+      .select({ urlCode: urlCollections.urlCode })
+      .from(urlCollections)
+      .where(eq(urlCollections.collectionId, collectionId))
+
+    const collectionCodes = inCollection.map((c) => c.urlCode)
+    if (collectionCodes.length === 0) {
+      return { urls: [], pagination: { page, limit, total: 0, totalPages: 0 } }
+    }
+    where = where ? and(where, inArray(urls.code, collectionCodes)) : inArray(urls.code, collectionCodes)
+  }
 
   const [totalResult] = where
     ? await db.select({ total: count() }).from(urls).where(where)
@@ -307,7 +384,7 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
 
   return {
     urls: rows.map((u) => formatUrlResponse(
-      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt,
+      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt, !!u.passwordHash, u.activeAt,
     )),
     pagination: {
       page,
@@ -397,6 +474,8 @@ function formatUrlResponse(
   description?: string | null,
   image?: string | null,
   createdAt?: Date,
+  hasPassword?: boolean,
+  activeAt?: Date | null,
 ) {
   return {
     code,
@@ -408,6 +487,8 @@ function formatUrlResponse(
     visits,
     uniqueVisits,
     expiresAt: expiresAt?.toISOString() ?? null,
+    activeAt: activeAt?.toISOString() ?? null,
+    hasPassword: hasPassword ?? false,
     createdAt: (createdAt ?? new Date()).toISOString(),
   }
 }

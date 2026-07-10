@@ -33,3 +33,12 @@ export const bulkLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, error: 'Too many requests, please try again later' },
 })
+
+export const passwordLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 5,
+  keyGenerator: (req) => `${req.ip ?? 'unknown'}:${req.params.code ?? 'unknown'}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many password attempts, please try again later' },
+})

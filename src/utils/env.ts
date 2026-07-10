@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { randomBytes } from 'crypto'
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
@@ -7,6 +8,7 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().default('*'),
   SUPABASE_URL: z.string().default('https://pobqjltfdfhbpocjnhbe.supabase.co'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
+  LINK_ACCESS_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   HEALTH_CHECK_INTERVAL_MS: z.coerce.number().int().min(0).default(3_600_000),

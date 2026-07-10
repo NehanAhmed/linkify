@@ -42,6 +42,24 @@ export const createUrlSchema = z.object({
     .min(1, 'TTL must be at least 1 day')
     .max(365, 'TTL cannot exceed 365 days')
     .optional(),
+  password: z
+    .string()
+    .min(4, 'Password must be at least 4 characters')
+    .max(128, 'Password too long')
+    .optional(),
+  activeAt: z
+    .string()
+    .datetime({ message: 'activeAt must be an ISO 8601 date' })
+    .optional(),
+  tags: z
+    .array(z.string().min(1).max(50))
+    .max(10, 'Max 10 tags per link')
+    .optional(),
+  collectionId: z
+    .number()
+    .int()
+    .positive()
+    .optional(),
 }).strict()
 
 export const createUrlBulkSchema = z.object({
@@ -75,6 +93,10 @@ export const listUrlsQuerySchema = paginationSchema.extend({
   minVisits: z.coerce.number().int().min(0).optional(),
   sortBy: z.enum(['createdAt', 'visits', 'code']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  tagIds: z.string().transform((s) => s.split(',').map(Number).filter((n) => !isNaN(n))).optional(),
+  collectionId: z.coerce.number().int().positive().optional(),
+  hasPassword: z.coerce.boolean().optional(),
+  isActive: z.coerce.boolean().optional(),
 }).strict()
 
 export type CreateUrlInput = z.infer<typeof createUrlSchema>

@@ -2,6 +2,10 @@ export interface CreateUrlRequest {
   url: string
   customCode?: string
   ttlDays?: number
+  password?: string
+  activeAt?: string
+  tags?: string[]
+  collectionId?: number
 }
 
 export interface UrlResponse {
@@ -12,7 +16,10 @@ export interface UrlResponse {
   description?: string | null
   image?: string | null
   visits: number
+  uniqueVisits: number
   expiresAt?: string | null
+  activeAt?: string | null
+  hasPassword: boolean
   createdAt: string
 }
 
@@ -57,4 +64,26 @@ export interface ApiResponse<T = unknown> {
 export interface PaginationParams {
   page: number
   limit: number
+}
+
+export interface CollectionResponse {
+  id: number
+  name: string
+  parentId: number | null
+  sortOrder: number
+  urlCount?: number
+  createdAt: string
+}
+
+export interface TagResponse {
+  id: number
+  name: string
+  color: string
+  createdAt: string
+}
+
+export interface BulkOperationResponse {
+  code: string
+  success: boolean
+  error?: string
 }
