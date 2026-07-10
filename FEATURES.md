@@ -5,15 +5,20 @@
 
 ---
 
-## 1. Authentication & User System
+## 1. Authentication & User System (Supabase Auth)
 
-- [ ] **User accounts** — Registration and login with email/password (bcrypt/argon2). JWT access + refresh token pair. Session management with rotation and revocation.
-- [ ] **Ownership model** — Every URL belongs to a user. Scoped CRUD so users see and manage only their own links. Admins see all.
-- [ ] **Role-based access control** — `admin`, `user` roles. Admins can manage users, purge data, view system metrics. Users manage their own links.
-- [ ] **OAuth / SSO** — Sign in with Google, GitHub, and Apple. Link multiple OAuth providers to one account.
-- [ ] **Two-factor authentication (2FA / TOTP)** — Optional TOTP via authenticator app for admin accounts. Backup recovery codes.
-- [ ] **API key management** — Per-user scoped API keys stored as bcrypt hashes. Key rotation, expiration, per-key rate limits, and last-used tracking via `api_keys` table.
-- [ ] **Breached password detection** — Check registration passwords against Have I Been Pwned API (k-anonymity model). Reject compromised passwords.
+> Uses [Supabase Auth](https://supabase.com/auth) as the identity provider — built on GoTrue, handles all OAuth flows, MFA, email verification, and password management. The Express API validates Supabase JWTs via JWKS endpoint. A local `users` table mirrors `auth.users` for application-level relationships and roles.
+
+- [ ] **Supabase project setup** — Create Supabase project (or use existing Neon + separate Supabase Auth). Enable email/password auth, Google, GitHub providers. Configure site URL and redirect URLs in Supabase dashboard.
+- [ ] **User <code>public.users</code> table** — Table with `id uuid PK REFERENCES auth.users(id) ON DELETE CASCADE`, `email text`, `role text DEFAULT 'user'`, `created_at timestamptz DEFAULT now()`. Sync via Supabase `on_auth_user_created` trigger or application-level webhook.
+- [ ] **JWT validation middleware** — Replace current `middleware/auth.ts` with Supabase JWT verification using `jsonwebtoken` + JWKS endpoint (`https://<project>.supabase.co/auth/v1/.well-known/jwks.json`). Cache JWKS keys with TTL. Decode `sub` (user UUID) and `role` from JWT claims.
+- [ ] **Ownership model** — Every `urls` row gets a `user_id uuid REFERENCES public.users(id) ON DELETE CASCADE` column. All queries scoped to `user_id`. Admins have an `admin` role bypass.
+- [ ] **Role-based access control** — `admin` and `user` roles stored in `public.users.role`. Admin-only endpoints (`GET /api/admin/*`, `DELETE /:code/purge`) check role from JWT claim. Role assignment via Supabase dashboard or admin API.
+- [ ] **OAuth / SSO** — Enabled in Supabase dashboard (Google, GitHub, Apple). Supabase handles the full OAuth flow. API receives Supabase JWT on successful auth. No code changes needed for new providers.
+- [ ] **Two-factor authentication (2FA / TOTP)** — Supabase Auth supports TOTP natively. Enable in Supabase dashboard. API reads `aal` (Authentication Assurance Level) claim from JWT to enforce 2FA for sensitive endpoints.
+- [ ] **API key management** — Custom `api_keys` table (Supabase Auth does not provide API keys). Columns: `id serial PK`, `user_id uuid FK`, `key_hash text` (bcrypt), `name text`, `scopes text[]`, `last_used_at timestamptz`, `expires_at timestamptz`, `created_at timestamptz`. `requireAuth` middleware checks for `Authorization: Bearer <key>` and validates against bcrypt hash.
+- [ ] **Email verification & password reset** — Built into Supabase Auth. API endpoints `POST /api/auth/reset-password` trigger Supabase's magic link flow. No custom email sending needed.
+- [ ] **Session management** — Supabase Auth issues short-lived access tokens (1h) + long-lived refresh tokens. `POST /api/auth/refresh` calls Supabase `auth.token('refresh_token')` endpoint. No manual JWT rotation logic needed.
 
 ---
 
