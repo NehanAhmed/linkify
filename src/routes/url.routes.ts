@@ -1,13 +1,16 @@
 import { Router } from 'express'
 import * as urlController from '../controllers/url.controllers'
+import { requireAuth } from '../middleware/auth'
+import { strictLimiter, bulkLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.post('/', urlController.createUrl)
-router.get('/', urlController.listUrls)
+router.post('/bulk', requireAuth, bulkLimiter, urlController.createUrlBulk)
+router.post('/', requireAuth, strictLimiter, urlController.createUrl)
+router.get('/', requireAuth, urlController.listUrls)
 router.get('/:code', urlController.redirectUrl)
 router.get('/:code/info', urlController.getUrlInfo)
 router.get('/:code/visits', urlController.getVisits)
-router.delete('/:code', urlController.deleteUrl)
+router.delete('/:code', requireAuth, urlController.deleteUrl)
 
 export default router

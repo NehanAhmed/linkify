@@ -3,7 +3,11 @@ import { pgTable, serial, text, timestamp, integer, index } from 'drizzle-orm/pg
 export const urls = pgTable('urls', {
   code: text('code').primaryKey(),
   url: text('url').notNull(),
+  title: text('title'),
+  description: text('description'),
+  image: text('image'),
   visits: integer('visits').default(0).notNull(),
+  expiresAt: timestamp('expires_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 })
