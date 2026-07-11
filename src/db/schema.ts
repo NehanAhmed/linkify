@@ -31,26 +31,33 @@ export const apiKeys = pgTable('api_keys', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 
-export const urls = pgTable('urls', {
-  code: text('code').primaryKey(),
-  url: text('url').notNull(),
-  title: text('title'),
-  description: text('description'),
-  image: text('image'),
-  visits: integer('visits').default(0).notNull(),
-  uniqueVisits: integer('unique_visits').default(0).notNull(),
-  userId: uuid('user_id')
-    .references(() => users.id, { onDelete: 'cascade' }),
-  passwordHash: text('password_hash'),
-  blockBots: boolean('block_bots').default(false).notNull(),
-  activeAt: timestamp('active_at'),
-  expiresAt: timestamp('expires_at'),
-  deletedAt: timestamp('deleted_at'),
-  lastCheckedAt: timestamp('last_checked_at'),
-  lastStatusCode: integer('last_status_code'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-})
+export const urls = pgTable(
+  'urls',
+  {
+    code: text('code').primaryKey(),
+    url: text('url').notNull(),
+    title: text('title'),
+    description: text('description'),
+    image: text('image'),
+    visits: integer('visits').default(0).notNull(),
+    uniqueVisits: integer('unique_visits').default(0).notNull(),
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' }),
+    passwordHash: text('password_hash'),
+    blockBots: boolean('block_bots').default(false).notNull(),
+    activeAt: timestamp('active_at'),
+    expiresAt: timestamp('expires_at'),
+    deletedAt: timestamp('deleted_at'),
+    lastCheckedAt: timestamp('last_checked_at'),
+    lastStatusCode: integer('last_status_code'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userDeletedIdx: index('urls_user_deleted_idx').on(table.userId, table.deletedAt),
+    deletedAtIdx: index('urls_deleted_at_idx').on(table.deletedAt),
+  }),
+)
 
 export const visits = pgTable(
   'visits',
@@ -77,6 +84,8 @@ export const visits = pgTable(
   (table) => ({
     codeIdx: index('visits_code_idx').on(table.code),
     visitedAtIdx: index('visits_visited_at_idx').on(table.visitedAt),
+    codeVisitedIdx: index('visits_code_visited_idx').on(table.code, table.visitedAt),
+    fingerprintCodeIdx: index('visits_fingerprint_code_idx').on(table.fingerprint, table.code, table.visitedAt),
     ipCodeIdx: index('visits_ip_code_idx').on(table.ipAddress, table.code),
   }),
 )
@@ -150,6 +159,21 @@ export const urlTags = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.urlCode, table.tagId] }),
     tagIdIdx: index('url_tags_tag_id_idx').on(table.tagId),
+  }),
+)
+
+export const urlStatsHourly = pgTable(
+  'url_stats_hourly',
+  {
+    code: text('code')
+      .notNull()
+      .references(() => urls.code, { onDelete: 'cascade' }),
+    hour: timestamp('hour', { withTimezone: true }).notNull(),
+    visits: integer('visits').default(0).notNull(),
+    uniqueVisits: integer('unique_visits').default(0).notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.code, table.hour] }),
   }),
 )
 
