@@ -9,6 +9,9 @@
 | DB push (sync schema) | `pnpm db:push` |
 | DB generate (migration) | `pnpm db:generate` |
 | Drizzle Studio | `pnpm db:studio` |
+| Run tests | `pnpm test` |
+| Watch tests | `pnpm test:watch` |
+| Typecheck | `pnpm typecheck` |
 
 ## Architecture
 

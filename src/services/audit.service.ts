@@ -7,6 +7,7 @@ export type AuditAction =
   | 'api_key.created'
   | 'api_key.revoked'
   | 'api_key.updated'
+  | 'url.created'
   | 'url.purged'
   | 'url.deleted'
   | 'url.password_set'
