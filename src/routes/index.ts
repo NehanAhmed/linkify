@@ -5,6 +5,7 @@ import adminRoutes from './admin.routes'
 import collectionRoutes from './collection.routes'
 import tagRoutes from './tag.routes'
 import publicRoutes from './public.routes'
+import billingRoutes from './billing.routes'
 import { check as healthCheck } from '../controllers/health.controller'
 import { requireAuth } from '../middleware/auth'
 import { requireRole } from '../middleware/requireRole'
@@ -14,6 +15,7 @@ const router = Router()
 
 router.get('/api/health', healthCheck)
 router.use('/api/auth', authRoutes)
+router.use('/api/billing', billingRoutes)
 router.use('/api/urls', urlRoutes)
 router.use('/api/collections', collectionRoutes)
 router.use('/api/tags', tagRoutes)

@@ -5,6 +5,7 @@ import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import pinoHttp from 'pino-http'
 import * as Sentry from '@sentry/node'
+import stripeRoutes from './routes/stripe.routes'
 import routes from './routes'
 import { rootRedirect } from './controllers/url.controllers'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
@@ -31,6 +32,7 @@ app.use(cors({ origin: allowedOrigins }))
 app.use(compression())
 app.use(cookieParser())
 app.use(pinoHttp({ logger }))
+app.use('/api/stripe', stripeRoutes)
 app.use(express.json({ limit: '1mb' }))
 app.disable('x-powered-by')
 app.use('/api', csrfProtection)
