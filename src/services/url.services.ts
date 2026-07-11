@@ -41,6 +41,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
 
   const activeAt = input.activeAt ? new Date(input.activeAt) : null
   const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
+  const blockBots = input.blockBots ?? false
 
   await db.insert(urls).values({
     code,
@@ -49,6 +50,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
     expiresAt,
     activeAt,
     passwordHash,
+    blockBots,
   })
 
   fetchLinkPreview(input.url)
@@ -89,7 +91,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
       .catch(() => {})
   }
 
-  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined, undefined, !!passwordHash, activeAt)
+  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined, undefined, !!passwordHash, activeAt, blockBots)
 }
 
 export async function resolveUrl(code: string) {
@@ -398,7 +400,7 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
 
   return {
     urls: rows.map((u) => formatUrlResponse(
-      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt, !!u.passwordHash, u.activeAt,
+      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt, !!u.passwordHash, u.activeAt, u.blockBots,
     )),
     pagination: {
       page,
@@ -490,6 +492,7 @@ function formatUrlResponse(
   createdAt?: Date,
   hasPassword?: boolean,
   activeAt?: Date | null,
+  blockBots?: boolean,
 ) {
   return {
     code,
@@ -503,6 +506,7 @@ function formatUrlResponse(
     expiresAt: expiresAt?.toISOString() ?? null,
     activeAt: activeAt?.toISOString() ?? null,
     hasPassword: hasPassword ?? false,
+    blockBots: blockBots ?? false,
     createdAt: (createdAt ?? new Date()).toISOString(),
   }
 }

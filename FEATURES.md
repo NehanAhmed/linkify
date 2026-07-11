@@ -67,14 +67,14 @@
 
 ## 5. Security Hardening
 
-- [ ] **Security audit log** — Append-only `audit_log` table recording every privileged action: user creation, API key generation, link purge, role change. Immutable via DB triggers or separate audit service.
-- [ ] **CSRF protection** — Double-submit cookie pattern or SameSite=Strict + CSRF token header for any cookie-authenticated routes (future admin UI).
-- [ ] **IP allowlisting** — Restrict API access to trusted IP ranges for enterprise users. Configurable per API key.
-- [ ] **JWT refresh token rotation** — Every refresh issues a new refresh token and revokes the old one. Refresh token reuse detection triggers full session invalidation.
-- [ ] **Encryption at rest** — Encrypt PII columns (email, IP addresses in long-term storage) using Postgres `pgcrypto` or AES-256-GCM via application layer.
-- [ ] **Rate limiting on auth endpoints** — Strict rate limits on login, registration, password reset (3/min per IP). Delayed error responses to prevent user enumeration.
-- [ ] **Bot / crawler detection** — Identify and optionally block known bots, headless browsers, and data center IPs. Configurable per-link allowance.
-- [ ] **Request fingerprinting** — Hash and store request fingerprint (IP + UA + Accept-Language) for abuse pattern detection. Alert on anomalous velocity.
+- [x] **Security audit log** — Append-only `audit_log` table recording every privileged action: user creation, API key generation, link purge, role change. Immutable via DB triggers or separate audit service.
+- [x] **CSRF protection** — Double-submit cookie pattern with HMAC-signed CSRF tokens. Skipped for Bearer-authenticated requests.
+- [x] **IP allowlisting** — Restrict API access to trusted IP ranges for enterprise users. Configurable per API key.
+- [x] **JWT refresh token rotation** — Every refresh issues a new refresh token and revokes the old one. Refresh token reuse detection triggers full session invalidation and audit log.
+- [x] **Encryption at rest** — Encrypt PII columns (email, IP addresses in long-term storage) using AES-256-GCM via application layer.
+- [x] **Rate limiting on auth endpoints** — Strict rate limits on auth endpoints (configurable, default 3/min per IP).
+- [x] **Bot / crawler detection** — Identify known bots, headless browsers via 29+ UA patterns. Flagged in visit records. Per-link `blockBots` setting returns 403 for automated requests.
+- [x] **Request fingerprinting** — SHA-256 hash of (IP + UA) stored per visit for unique visit deduplication and abuse pattern detection.
 
 ---
 
