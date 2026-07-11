@@ -8,12 +8,18 @@ import { env } from '../utils/env'
 import type { UpdateLinkSettingsInput } from '../validators/link.validators'
 import { logAction } from './audit.service'
 import { cacheDel, buildCacheKeyForUrl } from './cache'
+import { getUserPlan } from './subscription.service'
 
 const LINK_CHAIN_MAX_HOPS = 5
 const JWT_SECRET = new TextEncoder().encode(env.LINK_ACCESS_SECRET)
 const SHORT_URL_PATTERN = /^\/([a-zA-Z0-9_-]{3,16})$/
 
 export async function setPassword(code: string, userId: string, password: string) {
+  const plan = await getUserPlan(userId)
+  if (!plan.features.passwordProtection) {
+    throw new AppError('Password protection is not available on your plan', 403, 'FEATURE_NOT_AVAILABLE')
+  }
+
   const [existing] = await db
     .select({ userId: urls.userId })
     .from(urls)

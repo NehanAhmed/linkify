@@ -65,6 +65,28 @@ vi.mock('../../utils/codeGenerator', () => ({
   generateCustomCode: vi.fn((s: string) => s.toLowerCase().replace(/\s+/g, '-')),
 }))
 
+vi.mock('../../services/subscription.service', () => ({
+  getUserPlan: vi.fn().mockResolvedValue({
+    planCode: 'pro',
+    planName: 'Pro',
+    maxLinks: 10000,
+    maxCustomDomains: 5,
+    apiRateLimit: 10000,
+    features: {
+      advancedStats: true,
+      customDomains: true,
+      passwordProtection: true,
+      bulkOperations: true,
+      apiAccess: true,
+      affiliateLinks: true,
+      prioritySupport: false,
+    },
+    status: 'active',
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  }),
+}))
+
 vi.mock('bcrypt', () => ({
   default: {
     hash: vi.fn().mockResolvedValue('$2b$12$hashedpassword'),
@@ -116,6 +138,7 @@ describe('createShortUrl', () => {
   })
 
   it('rejects duplicate codes', async () => {
+    resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([{ code: 'abc1234' }])
 
     await expect(createShortUrl(validInput, userId))
@@ -192,6 +215,7 @@ describe('recordVisit', () => {
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
+    resolveFn.mockResolvedValueOnce([])
 
     await recordVisit('abc', {
       ipAddress: '1.2.3.4',
@@ -207,6 +231,7 @@ describe('recordVisit', () => {
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
+    resolveFn.mockResolvedValueOnce([])
 
     await recordVisit('abc', { ipAddress: '1.2.3.4', userAgent: 'curl/7.0' })
 
@@ -214,6 +239,7 @@ describe('recordVisit', () => {
   })
 
   it('skips unique visit increment for existing fingerprint', async () => {
+    resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([{ id: 1 }])
@@ -224,6 +250,7 @@ describe('recordVisit', () => {
   })
 
   it('handles missing IP address', async () => {
+    resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([])
@@ -359,7 +386,9 @@ describe('createShortUrlBulk', () => {
   })
 
   it('handles partial failures', async () => {
-    resolveFn.mockResolvedValueOnce([{ code: 'abc1234' }])
+    resolveFn.mockResolvedValueOnce([])
+    resolveFn.mockResolvedValueOnce([])
+    resolveFn.mockResolvedValueOnce([])
     resolveFn.mockResolvedValueOnce([{ code: 'abc1234' }])
 
     const results = await createShortUrlBulk({

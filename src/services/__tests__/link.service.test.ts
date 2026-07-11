@@ -46,6 +46,26 @@ vi.mock('../../services/cache', () => ({
   buildCacheKeyForUrl: vi.fn((code: string) => `url:${code}`),
 }))
 
+vi.mock('../../services/subscription.service', () => ({
+  getUserPlan: vi.fn().mockResolvedValue({
+    planCode: 'pro',
+    planName: 'Pro',
+    maxLinks: 10000,
+    features: {
+      advancedStats: true,
+      customDomains: true,
+      passwordProtection: true,
+      bulkOperations: true,
+      apiAccess: true,
+      affiliateLinks: true,
+      prioritySupport: false,
+    },
+    status: 'active',
+    currentPeriodEnd: null,
+    cancelAtPeriodEnd: false,
+  }),
+}))
+
 vi.mock('../../services/audit.service', () => ({
   logAction: vi.fn().mockResolvedValue(undefined),
 }))

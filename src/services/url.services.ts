@@ -16,6 +16,7 @@ import { isBot } from '../utils/botDetection'
 import { createFingerprint } from '../utils/fingerprint'
 import { encrypt, decrypt } from '../utils/encryption'
 import { cacheGet, cacheSet, cacheDel, buildCacheKeyForUrl } from './cache'
+import { getUserPlan } from './subscription.service'
 
 const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
@@ -30,6 +31,28 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
   }
 
   await validateUrlSafety(input.url)
+
+  const plan = await getUserPlan(userId)
+  const [userLinkCount] = await db
+    .select({ total: count() })
+    .from(urls)
+    .where(and(eq(urls.userId, userId), isNull(urls.deletedAt)))
+
+  if ((userLinkCount?.total ?? 0) >= plan.maxLinks) {
+    throw new AppError(
+      `Link limit reached (${plan.maxLinks}/${plan.maxLinks}). Upgrade your plan for more.`,
+      403,
+      'PLAN_LIMIT_REACHED',
+    )
+  }
+
+  if (input.password && !plan.features.passwordProtection) {
+    throw new AppError('Password protection is not available on your plan', 403, 'FEATURE_NOT_AVAILABLE')
+  }
+
+  if (input.collectionId && !plan.features.bulkOperations) {
+    throw new AppError('Collections are not available on your plan', 403, 'FEATURE_NOT_AVAILABLE')
+  }
 
   const existing = await db.select().from(urls).where(eq(urls.code, code)).limit(1)
   if (existing.length > 0) {
@@ -146,6 +169,14 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     encryptedIp = encrypt(metadata.ipAddress)
   }
 
+  const [urlRow] = await db
+    .select({ affiliateId: urls.affiliateId })
+    .from(urls)
+    .where(eq(urls.code, code))
+    .limit(1)
+
+  const isAffiliateClick = !!(urlRow?.affiliateId)
+
   await db.insert(visits).values({
     code,
     ipAddress: encryptedIp,
@@ -161,6 +192,7 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     referrerCategory,
     isBot: botResult.isBot,
     fingerprint: fingerprint || null,
+    isAffiliateClick,
   })
 
   await db.update(urls).set({ visits: sql`visits + 1` }).where(eq(urls.code, code))
