@@ -94,12 +94,12 @@
 
 ## 7. Monetization & Business
 
-- [ ] **Subscription tiers** — Free (100 links, basic stats), Pro (10k links, full analytics, custom domains), Enterprise (unlimited, SSO, SLA). Managed via Stripe Billing.
-- [ ] **Stripe integration** — Webhook handler for `checkout.session.completed`, `invoice.paid`, `subscription.cancelled`. Sync plan limits to DB.
-- [ ] **API quota management** — Track usage per user/plan with monthly reset. Block or return 429 when quota exhausted. Upgrade prompt in response headers.
-- [ ] **Branded short domains** — Paid add-on feature. Each custom domain costs $X/month. Automated SSL via Let's Encrypt.
-- [ ] **Affiliate link management** — Assign affiliate IDs to links. Track commission-ready clicks. Export reports for affiliate payouts.
-- [ ] **Usage analytics dashboard data** — Aggregated stats endpoint for billing: total links, total clicks, active users, API calls. Used for internal dashboards.
+- [x] **Subscription tiers** — Free (100 links, basic stats), Pro (10k links, full analytics, custom domains), Enterprise (unlimited, SSO, SLA). Managed via Stripe Billing.
+- [x] **Stripe integration** — Webhook handler for `checkout.session.completed`, `invoice.paid`, `subscription.cancelled`, `customer.subscription.updated`. Sync plan limits to DB.
+- [x] **API quota management** — Track usage per user/plan with monthly reset. Block or return 429 when quota exhausted. Upgrade prompt in response headers.
+- [x] **Branded short domains** — Paid add-on feature. Each custom domain costs $X/month. SSL is manual/stub (no Let's Encrypt ACME yet).
+- [x] **Affiliate link management** — Assign affiliate IDs to links. Track commission-ready clicks. Export reports for affiliate payouts.
+- [x] **Usage analytics dashboard data** — Aggregated stats endpoint for billing: total links, total clicks, active users, API calls. Used for internal dashboards.
 
 ---
 
