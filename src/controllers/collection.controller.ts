@@ -110,7 +110,8 @@ export async function shareCollection(req: Request, res: Response, next: NextFun
   try {
     const { id } = collectionParamsSchema.parse(req.params)
     const result = await collectionsService.shareCollection(id, req.user!.id)
-    await logActionFromReq(req, 'collection.shared', 'collection', String(id), { shareToken: result.shareToken })
+    const maskedToken = result.shareToken.slice(0, 8) + '...'
+    await logActionFromReq(req, 'collection.shared', 'collection', String(id), { shareToken: maskedToken })
     res.json({ success: true, data: { ...result, shareUrl: `/api/shared/${result.shareToken}` } })
   } catch (err) {
     next(err)

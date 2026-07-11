@@ -11,6 +11,7 @@ import { verifyLinkAccessToken, resolveChain } from '../services/link.service'
 import { AppError } from '../utils/AppError'
 import { logActionFromReq } from '../services/audit.service'
 import { isBot } from '../utils/botDetection'
+import { logger } from '../utils/logger'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -134,7 +135,9 @@ export async function deleteUrl(req: Request, res: Response, next: NextFunction)
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
     await urlService.deleteUrl(code, req.user!.id, req.user!.role === 'admin')
-    await logActionFromReq(req, 'url.deleted', 'url', code)
+    logActionFromReq(req, 'url.deleted', 'url', code).catch((err) => {
+      logger.error({ err, code }, 'Failed to persist audit log for URL deletion')
+    })
     res.json({ success: true, message: 'URL soft deleted successfully' })
   } catch (err) {
     next(err)

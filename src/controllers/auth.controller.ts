@@ -43,6 +43,10 @@ export async function refreshToken(req: Request, res: Response, next: NextFuncti
   try {
     const { refresh_token } = refreshSchema.parse(req.body)
     const tokens = await authService.refreshSupabaseToken(refresh_token)
+    const userId = (tokens as any)?.user?.id
+    if (userId) {
+      authService.checkRefreshTokenReuse(userId, refresh_token, req.ip).catch(() => {})
+    }
     res.json({ success: true, data: tokens })
   } catch (err) {
     next(err)
