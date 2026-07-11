@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, integer, index, uuid, boolean, uniqueIndex, primaryKey, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, serial, text, timestamp, integer, index, uuid, boolean, uniqueIndex, primaryKey, jsonb, numeric, varchar } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
@@ -51,6 +51,8 @@ export const urls = pgTable(
     lastCheckedAt: timestamp('last_checked_at'),
     lastStatusCode: integer('last_status_code'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
+    affiliateId: text('affiliate_id'),
+    affiliateNetwork: text('affiliate_network'),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
   },
   (table) => ({
@@ -79,6 +81,8 @@ export const visits = pgTable(
     referrerCategory: text('referrer_category'),
     isBot: boolean('is_bot').default(false).notNull(),
     fingerprint: text('fingerprint'),
+    isAffiliateClick: boolean('is_affiliate_click').default(false).notNull(),
+    affiliateCommission: numeric('affiliate_commission'),
     visitedAt: timestamp('visited_at').defaultNow().notNull(),
   },
   (table) => ({
@@ -194,5 +198,88 @@ export const auditLog = pgTable(
     userIdIdx: index('audit_log_user_id_idx').on(table.userId),
     actionIdx: index('audit_log_action_idx').on(table.action),
     createdAtIdx: index('audit_log_created_at_idx').on(table.createdAt),
+  }),
+)
+
+export const plans = pgTable('plans', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  code: varchar('code', { length: 50 }).notNull().unique(),
+  description: text('description'),
+  maxLinks: integer('max_links').default(100).notNull(),
+  maxCustomDomains: integer('max_custom_domains').default(0).notNull(),
+  apiRateLimit: integer('api_rate_limit').default(100).notNull(),
+  features: jsonb('features').default([]).notNull(),
+  priceMonthly: integer('price_monthly').default(0).notNull(),
+  priceYearly: integer('price_yearly').default(0).notNull(),
+  sortOrder: integer('sort_order').default(0).notNull(),
+  active: boolean('active').default(true).notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+})
+
+export const subscriptions = pgTable(
+  'subscriptions',
+  {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    planId: integer('plan_id')
+      .notNull()
+      .references(() => plans.id, { onDelete: 'restrict' }),
+    stripeSubscriptionId: text('stripe_subscription_id'),
+    stripeCustomerId: text('stripe_customer_id'),
+    status: text('status').notNull().default('incomplete'),
+    currentPeriodStart: timestamp('current_period_start'),
+    currentPeriodEnd: timestamp('current_period_end'),
+    cancelAtPeriodEnd: boolean('cancel_at_period_end').default(false).notNull(),
+    trialEnd: timestamp('trial_end'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('subscriptions_user_id_idx').on(table.userId),
+    stripeSubIdIdx: uniqueIndex('subscriptions_stripe_sub_id_idx').on(table.stripeSubscriptionId),
+    stripeCustIdIdx: index('subscriptions_stripe_cust_id_idx').on(table.stripeCustomerId),
+  }),
+)
+
+export const usageQuota = pgTable(
+  'usage_quota',
+  {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    yearMonth: varchar('year_month', { length: 7 }).notNull(),
+    requestsCount: integer('requests_count').default(0).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userMonthIdx: uniqueIndex('usage_quota_user_month_idx').on(table.userId, table.yearMonth),
+  }),
+)
+
+export const customDomains = pgTable(
+  'custom_domains',
+  {
+    id: serial('id').primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    domain: text('domain').notNull(),
+    verificationToken: text('verification_token').notNull(),
+    verifiedAt: timestamp('verified_at'),
+    sslStatus: text('ssl_status').default('pending').notNull(),
+    sslExpiresAt: timestamp('ssl_expires_at'),
+    active: boolean('active').default(false).notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    userDomainIdx: uniqueIndex('custom_domains_user_domain_idx').on(table.userId, table.domain),
+    domainIdx: uniqueIndex('custom_domains_domain_idx').on(table.domain),
   }),
 )

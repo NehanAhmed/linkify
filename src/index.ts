@@ -7,11 +7,16 @@ import { logger } from './utils/logger'
 import app from './app'
 import { createServer } from 'http'
 import { startHealthCheckJob } from './jobs/healthCheckJob'
+import { seedPlans } from './jobs/seedPlans'
 
 const server = createServer(app)
 
 server.listen(env.PORT, () => {
   logger.info({ port: env.PORT }, 'Server started')
+
+  seedPlans().catch((err) => {
+    logger.error({ err }, 'Failed to seed plans on startup')
+  })
 
   if (env.HEALTH_CHECK_INTERVAL_MS > 0) {
     startHealthCheckJob(env.HEALTH_CHECK_INTERVAL_MS)

@@ -24,6 +24,13 @@ const envSchema = z.object({
   REDIS_URL: z.string().optional(),
   REDIS_CACHE_TTL: z.coerce.number().int().positive().default(300),
   DATABASE_REPLICA_URL: z.string().optional(),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_FREE: z.string().optional(),
+  STRIPE_PRICE_PRO: z.string().default(''),
+  STRIPE_PRICE_ENTERPRISE: z.string().optional(),
+  BILLING_SUCCESS_URL: z.string().default('http://localhost:3000/billing/success'),
+  BILLING_CANCEL_URL: z.string().default('http://localhost:3000/billing/cancel'),
 })
 
 function validateEnv() {
