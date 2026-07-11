@@ -30,7 +30,7 @@ export function stopHealthCheckJob(): void {
   }
 }
 
-async function processBatch(): Promise<void> {
+export async function processBatch(): Promise<number> {
   const staleCutoff = new Date(Date.now() - 86_400_000) // 24 hours ago
 
   const rows = await db
@@ -46,7 +46,7 @@ async function processBatch(): Promise<void> {
     )
     .limit(BATCH_SIZE)
 
-  if (rows.length === 0) return
+  if (rows.length === 0) return 0
 
   const results = await Promise.allSettled(
     rows.map(async (row) => {
@@ -65,4 +65,6 @@ async function processBatch(): Promise<void> {
   if (failed > 0) {
     logger.warn({ checked: rows.length, failed }, 'Health check partial failure')
   }
+
+  return rows.length
 }
