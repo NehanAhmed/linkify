@@ -31,6 +31,18 @@ const envSchema = z.object({
   STRIPE_PRICE_ENTERPRISE: z.string().optional(),
   BILLING_SUCCESS_URL: z.string().default('http://localhost:3000/billing/success'),
   BILLING_CANCEL_URL: z.string().default('http://localhost:3000/billing/cancel'),
+
+  // Feature flags
+  FEATURE_BULK_OPERATIONS: z.enum(['enabled', 'disabled']).default('enabled'),
+  FEATURE_LINK_CHAINING: z.enum(['enabled', 'disabled']).default('enabled'),
+  FEATURE_LINK_ROTATION: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_DEEP_LINKING: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_MULTI_LANGUAGE: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_WEBHOOK_SYSTEM: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_GRAPHQL: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_SCHEDULED_LINKS: z.enum(['enabled', 'disabled']).default('enabled'),
+  FEATURE_RETENTION_ANALYSIS: z.enum(['enabled', 'disabled']).default('disabled'),
+  FEATURE_EXPORT_SCHEDULER: z.enum(['enabled', 'disabled']).default('disabled'),
 })
 
 function validateEnv() {

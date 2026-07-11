@@ -4,6 +4,7 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey(),
   email: text('email'),
   role: text('role').default('user').notNull(),
+  suspendedAt: timestamp('suspended_at'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 })
 

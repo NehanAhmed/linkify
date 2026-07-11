@@ -1,40 +1,92 @@
 import { Router } from 'express'
-import { AppError } from '../utils/AppError'
 import type { Request, Response, NextFunction } from 'express'
-import { db } from '../db'
-import { users, urls, visits, subscriptions, plans } from '../db/schema'
-import { getAuditLog } from '../services/audit.service'
-import { count, sql, eq, inArray } from 'drizzle-orm'
+import {
+  getDashboardStats,
+  getUsers,
+  getUserDetail,
+  updateUserRole,
+  suspendUser,
+  unsuspendUser,
+  getUserLinks,
+  getAuditLogWithUsers,
+  getSystemConfig,
+  triggerPurgeExpired,
+  triggerHealthCheck,
+  getMaintenanceStatus,
+} from '../services/admin.service'
+import {
+  adminPaginationSchema,
+  updateUserRoleSchema,
+  auditLogQuerySchema,
+  dashboardQuerySchema,
+  purgeExpiredSchema,
+} from '../validators/admin.validators'
+import { getAllFeatureFlags } from '../utils/featureFlags'
 
 const router = Router()
 
-router.get('/users', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/dashboard', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const rows = await db
-      .select({ id: users.id, email: users.email, role: users.role, createdAt: users.createdAt })
-      .from(users)
-      .orderBy(users.createdAt)
-
-    res.json({ success: true, data: rows })
+    const { days } = dashboardQuerySchema.parse(req.query)
+    const data = await getDashboardStats(days)
+    res.json({ success: true, data })
   } catch (err) {
     next(err)
   }
 })
 
-router.get('/stats', async (_req: Request, res: Response, next: NextFunction) => {
+router.get('/users', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const [userCount] = await db.select({ total: count() }).from(users)
-    const [urlCount] = await db.select({ total: count() }).from(urls)
-    const [visitCount] = await db.select({ total: count() }).from(visits)
+    const { page, limit } = adminPaginationSchema.parse(req.query)
+    const data = await getUsers(page, limit)
+    res.json({ success: true, data })
+  } catch (err) {
+    next(err)
+  }
+})
 
-    res.json({
-      success: true,
-      data: {
-        users: userCount?.total ?? 0,
-        urls: urlCount?.total ?? 0,
-        visits: visitCount?.total ?? 0,
-      },
-    })
+router.get('/users/:id', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await getUserDetail(req.params.id as string)
+    res.json({ success: true, data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.patch('/users/:id/role', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { role } = updateUserRoleSchema.parse(req.body)
+    await updateUserRole(req.params.id as string, role)
+    res.json({ success: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/users/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await suspendUser(req.params.id as string)
+    res.json({ success: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/users/:id/unsuspend', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    await unsuspendUser(req.params.id as string)
+    res.json({ success: true })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/users/:id/links', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { page, limit } = adminPaginationSchema.parse(req.query)
+    const data = await getUserLinks(req.params.id as string, page, limit)
+    res.json({ success: true, data })
   } catch (err) {
     next(err)
   }
@@ -42,13 +94,9 @@ router.get('/stats', async (_req: Request, res: Response, next: NextFunction) =>
 
 router.get('/audit-log', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1)
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20))
-    const action = req.query.action as string | undefined
-    const userId = req.query.userId as string | undefined
-
-    const result = await getAuditLog({ page, limit, action, userId })
-    res.json({ success: true, data: result })
+    const { page, limit, action, userId } = auditLogQuerySchema.parse(req.query)
+    const data = await getAuditLogWithUsers(page, limit, action, userId)
+    res.json({ success: true, data })
   } catch (err) {
     next(err)
   }
@@ -56,34 +104,63 @@ router.get('/audit-log', async (req: Request, res: Response, next: NextFunction)
 
 router.get('/billing/stats', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const [userCount] = await db.select({ total: count() }).from(users)
-    const [urlCount] = await db.select({ total: count() }).from(urls)
-    const [visitCount] = await db.select({ total: count() }).from(visits)
-
-    const [activeSubs] = await db
-      .select({ total: count() })
-      .from(subscriptions)
-      .where(inArray(subscriptions.status, ['active', 'trialing', 'past_due']))
-
-    const [mrrResult] = await db
-      .select({ total: sql<number>`COALESCE(SUM(${plans.priceMonthly}), 0)` })
-      .from(subscriptions)
-      .innerJoin(plans, eq(subscriptions.planId, plans.id))
-      .where(inArray(subscriptions.status, ['active', 'trialing']))
-
-    const yearMonth = new Date().toISOString().slice(0, 7)
-
+    const data = await getDashboardStats(30)
     res.json({
       success: true,
       data: {
-        totalUsers: userCount?.total ?? 0,
-        totalLinks: urlCount?.total ?? 0,
-        totalVisits: visitCount?.total ?? 0,
-        activeSubscriptions: activeSubs?.total ?? 0,
-        mrr: mrrResult?.total ?? 0,
-        quotaMonth: yearMonth,
+        totalUsers: data.users.total,
+        totalLinks: data.urls.total,
+        totalVisits: data.visits.total,
+        activeSubscriptions: data.activeSubscriptions,
+        mrr: data.mrr,
+        quotaMonth: data.quotaMonth,
       },
     })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/system/config', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await getSystemConfig()
+    res.json({ success: true, data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/system/flags', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    res.json({ success: true, data: getAllFeatureFlags() })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/maintenance/purge-expired', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { daysOld } = purgeExpiredSchema.parse(req.body)
+    const data = await triggerPurgeExpired(daysOld)
+    res.json({ success: true, data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post('/maintenance/recheck-links', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = await triggerHealthCheck()
+    res.json({ success: true, data })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.get('/maintenance/status', async (_req: Request, res: Response, next: NextFunction) => {
+  try {
+    const data = getMaintenanceStatus()
+    res.json({ success: true, data })
   } catch (err) {
     next(err)
   }
