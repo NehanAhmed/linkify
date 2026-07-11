@@ -1,6 +1,6 @@
-import { db } from '../db'
-import { urls, visits, tags, urlTags, urlCollections, collections } from '../db/schema'
-import { eq, desc, count, sql, and, gte, isNull, inArray, type SQL } from 'drizzle-orm'
+import { db, dbReplica } from '../db'
+import { urls, visits, tags, urlTags, urlCollections, collections, urlStatsHourly } from '../db/schema'
+import { eq, desc, count, sql, and, gte, isNull, inArray, asc, type SQL } from 'drizzle-orm'
 import { generateShortCode } from '../utils/codeGenerator'
 import { RESERVED_CODES } from '../constants/reservedWords'
 import { fetchLinkPreview } from './linkPreview'
@@ -15,6 +15,7 @@ import bcrypt from 'bcrypt'
 import { isBot } from '../utils/botDetection'
 import { createFingerprint } from '../utils/fingerprint'
 import { encrypt, decrypt } from '../utils/encryption'
+import { cacheGet, cacheSet, cacheDel, buildCacheKeyForUrl } from './cache'
 
 const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
@@ -95,6 +96,19 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
 }
 
 export async function resolveUrl(code: string) {
+  const cacheKey = buildCacheKeyForUrl(code)
+  const cached = await cacheGet<typeof urls.$inferSelect>(cacheKey)
+  if (cached) {
+    const now = new Date()
+    if (cached.expiresAt && cached.expiresAt < now) {
+      throw new AppError('This link has expired', 410, 'LINK_EXPIRED')
+    }
+    if (cached.activeAt && cached.activeAt > now) {
+      throw new AppError('This link is not yet active', 410, 'LINK_NOT_ACTIVE')
+    }
+    return cached
+  }
+
   const result = await db
     .select()
     .from(urls)
@@ -114,6 +128,8 @@ export async function resolveUrl(code: string) {
   if (row.activeAt && row.activeAt > now) {
     throw new AppError('This link is not yet active', 410, 'LINK_NOT_ACTIVE')
   }
+
+  cacheSet(cacheKey, row).catch(() => {})
 
   return row
 }
@@ -162,22 +178,43 @@ export async function recordVisit(code: string, metadata: { ipAddress?: string; 
     )
     .limit(1)
 
-  if (!existing) {
+  const isNewUnique = !existing
+
+  if (isNewUnique) {
     await db.update(urls).set({ uniqueVisits: sql`unique_visits + 1` }).where(eq(urls.code, code))
   }
+
+  const hourStart = new Date(Date.now() - Date.now() % 3_600_000)
+  await db
+    .insert(urlStatsHourly)
+    .values({
+      code,
+      hour: hourStart,
+      visits: 1,
+      uniqueVisits: isNewUnique ? 1 : 0,
+    })
+    .onConflictDoUpdate({
+      target: [urlStatsHourly.code, urlStatsHourly.hour],
+      set: {
+        visits: sql`${urlStatsHourly.visits} + 1`,
+        uniqueVisits: isNewUnique
+          ? sql`${urlStatsHourly.uniqueVisits} + 1`
+          : sql`${urlStatsHourly.uniqueVisits}`,
+      },
+    })
 }
 
 export async function getUrlVisits(code: string, page: number, limit: number) {
   const offset = (page - 1) * limit
 
-  const [totalResult] = await db
+  const [totalResult] = await dbReplica
     .select({ total: count() })
     .from(visits)
     .where(eq(visits.code, code))
 
   const total = totalResult?.total ?? 0
 
-  const rows = await db
+  const rows = await dbReplica
     .select()
     .from(visits)
     .where(eq(visits.code, code))
@@ -222,82 +259,79 @@ export async function getUrlStats(code: string) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
 
-  const hourly = await db.execute<{ hour: string; count: number }>(
-    sql`
-      SELECT
-        date_trunc('hour', visited_at) AS hour,
-        COUNT(*)::int AS count
-      FROM visits
-      WHERE code = ${code}
-        AND visited_at >= NOW() - INTERVAL '7 days'
-      GROUP BY hour
-      ORDER BY hour ASC
-    `,
-  )
+  const hourlyRows = await dbReplica
+    .select({
+      hour: urlStatsHourly.hour,
+      visits: urlStatsHourly.visits,
+      uniqueVisits: urlStatsHourly.uniqueVisits,
+    })
+    .from(urlStatsHourly)
+    .where(
+      and(
+        eq(urlStatsHourly.code, code),
+        gte(urlStatsHourly.hour, sql`NOW() - INTERVAL '7 days'`),
+      ),
+    )
+    .orderBy(asc(urlStatsHourly.hour))
 
-  const daily = await db.execute<{ date: string; count: number }>(
-    sql`
-      SELECT
-        date_trunc('day', visited_at) AS date,
-        COUNT(*)::int AS count
-      FROM visits
-      WHERE code = ${code}
-      GROUP BY date
-      ORDER BY date ASC
-    `,
-  )
+  const dailyMap = new Map<string, { visits: number; uniqueVisits: number }>()
+  for (const row of hourlyRows) {
+    const day = row.hour.toISOString().slice(0, 10)
+    const existing = dailyMap.get(day) ?? { visits: 0, uniqueVisits: 0 }
+    existing.visits += row.visits
+    existing.uniqueVisits += row.uniqueVisits
+    dailyMap.set(day, existing)
+  }
 
   return {
     totalVisits: urlRow.totalVisits,
     uniqueVisits: urlRow.uniqueVisits,
-    hourly: hourly.rows.map((r) => ({
-      hour: new Date(r.hour).toISOString(),
-      count: r.count,
+    hourly: hourlyRows.map((r) => ({
+      hour: r.hour.toISOString(),
+      visits: r.visits,
+      uniqueVisits: r.uniqueVisits,
     })),
-    daily: daily.rows.map((r) => ({
-      date: new Date(r.date).toISOString(),
-      count: r.count,
-    })),
+    daily: Array.from(dailyMap.entries())
+      .map(([date, agg]) => ({ date, visits: agg.visits, uniqueVisits: agg.uniqueVisits }))
+      .sort((a, b) => a.date.localeCompare(b.date)),
   }
 }
 
-export async function exportUrlVisits(code: string): Promise<string> {
-  const rows = await db
+export async function getUrlVisitsPage(code: string, page: number, pageSize: number) {
+  const offset = (page - 1) * pageSize
+  const rows = await dbReplica
     .select()
     .from(visits)
     .where(eq(visits.code, code))
-    .orderBy(desc(visits.visitedAt))
+    .orderBy(asc(visits.id))
+    .limit(pageSize)
+    .offset(offset)
+  return rows
+}
 
-  const headers = [
-    'id', 'code', 'ip_address', 'user_agent', 'referer',
-    'country', 'city', 'device_type', 'os', 'browser',
-    'browser_version', 'referrer_category', 'is_bot', 'visited_at',
-  ]
+export const CSV_HEADERS = [
+  'id', 'code', 'ip_address', 'user_agent', 'referer',
+  'country', 'city', 'device_type', 'os', 'browser',
+  'browser_version', 'referrer_category', 'is_bot', 'visited_at',
+]
 
-  const csvRows = [headers.join(',')]
-
-  for (const v of rows) {
-    csvRows.push(
-      [
-        v.id,
-        v.code,
-        '',
-        escapeCsv(v.userAgent),
-        escapeCsv(v.referer),
-        escapeCsv(v.country),
-        escapeCsv(v.city),
-        escapeCsv(v.deviceType),
-        escapeCsv(v.os),
-        escapeCsv(v.browser),
-        escapeCsv(v.browserVersion),
-        escapeCsv(v.referrerCategory),
-        v.isBot ? 'true' : 'false',
-        v.visitedAt.toISOString(),
-      ].join(','),
-    )
-  }
-
-  return '\uFEFF' + csvRows.join('\n')
+export function visitToCsvRow(v: typeof visits.$inferSelect): string {
+  return [
+    v.id,
+    v.code,
+    '',
+    escapeCsv(v.userAgent),
+    escapeCsv(v.referer),
+    escapeCsv(v.country),
+    escapeCsv(v.city),
+    escapeCsv(v.deviceType),
+    escapeCsv(v.os),
+    escapeCsv(v.browser),
+    escapeCsv(v.browserVersion),
+    escapeCsv(v.referrerCategory),
+    v.isBot ? 'true' : 'false',
+    v.visitedAt.toISOString(),
+  ].join(',')
 }
 
 function escapeCsv(value: string | number | null | undefined): string {
@@ -359,7 +393,7 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
   let where = conditions.length > 0 ? and(...conditions) : undefined
 
   if (tagIds && tagIds.length > 0) {
-    const tagged = await db
+    const tagged = await dbReplica
       .select({ urlCode: urlTags.urlCode })
       .from(urlTags)
       .where(inArray(urlTags.tagId, tagIds))
@@ -372,7 +406,7 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
   }
 
   if (collectionId) {
-    const inCollection = await db
+    const inCollection = await dbReplica
       .select({ urlCode: urlCollections.urlCode })
       .from(urlCollections)
       .where(eq(urlCollections.collectionId, collectionId))
@@ -385,8 +419,8 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
   }
 
   const [totalResult] = where
-    ? await db.select({ total: count() }).from(urls).where(where)
-    : await db.select({ total: count() }).from(urls)
+    ? await dbReplica.select({ total: count() }).from(urls).where(where)
+    : await dbReplica.select({ total: count() }).from(urls)
   const total = totalResult?.total ?? 0
 
   const orderColumn = sortBy === 'createdAt' ? urls.createdAt
@@ -395,8 +429,8 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
   const order = sortOrder === 'asc' ? sql`${orderColumn} ASC` : sql`${orderColumn} DESC`
 
   const rows = where
-    ? await db.select().from(urls).where(where).orderBy(order).limit(limit).offset(offset)
-    : await db.select().from(urls).orderBy(order).limit(limit).offset(offset)
+    ? await dbReplica.select().from(urls).where(where).orderBy(order).limit(limit).offset(offset)
+    : await dbReplica.select().from(urls).orderBy(order).limit(limit).offset(offset)
 
   return {
     urls: rows.map((u) => formatUrlResponse(
@@ -427,6 +461,7 @@ export async function deleteUrl(code: string, userId: string, isAdmin = false) {
   }
 
   await db.update(urls).set({ deletedAt: new Date() }).where(eq(urls.code, code))
+  cacheDel(buildCacheKeyForUrl(code)).catch(() => {})
 }
 
 export async function purgeUrl(code: string, userId: string, isAdmin = false) {
@@ -448,6 +483,7 @@ export async function purgeUrl(code: string, userId: string, isAdmin = false) {
   if (result.length === 0) {
     throw new AppError('URL not found', 404, 'URL_NOT_FOUND')
   }
+  cacheDel(buildCacheKeyForUrl(code)).catch(() => {})
 }
 
 export async function purgeExpiredUrls(daysOld: number = 30) {

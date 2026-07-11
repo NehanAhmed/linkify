@@ -12,6 +12,9 @@ import { AppError } from '../utils/AppError'
 import { logActionFromReq } from '../services/audit.service'
 import { isBot } from '../utils/botDetection'
 import { logger } from '../utils/logger'
+import { db } from '../db'
+import { visits } from '../db/schema'
+import { count, eq, asc } from 'drizzle-orm'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -107,13 +110,29 @@ export async function getUrlStats(req: Request, res: Response, next: NextFunctio
   }
 }
 
+const CSV_EXPORT_PAGE_SIZE = 500
+
 export async function exportVisits(req: Request, res: Response, next: NextFunction) {
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
-    const csv = await urlService.exportUrlVisits(code)
+
+    const [totalResult] = await db.select({ total: count() }).from(visits).where(eq(visits.code, code))
+    const total = totalResult?.total ?? 0
+
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
     res.setHeader('Content-Disposition', `attachment; filename="${code}-visits.csv"`)
-    res.send(csv)
+
+    const headerRow = urlService.CSV_HEADERS.join(',')
+    res.write('\uFEFF' + headerRow + '\n')
+
+    for (let page = 1; page <= Math.ceil(total / CSV_EXPORT_PAGE_SIZE); page++) {
+      const rows = await urlService.getUrlVisitsPage(code, page, CSV_EXPORT_PAGE_SIZE)
+      for (const v of rows) {
+        res.write(urlService.visitToCsvRow(v) + '\n')
+      }
+    }
+
+    res.end()
   } catch (err) {
     next(err)
   }

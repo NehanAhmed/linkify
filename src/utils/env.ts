@@ -21,6 +21,9 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
   CSRF_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
   FINGERPRINT_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
+  REDIS_URL: z.string().optional(),
+  REDIS_CACHE_TTL: z.coerce.number().int().positive().default(300),
+  DATABASE_REPLICA_URL: z.string().optional(),
 })
 
 function validateEnv() {

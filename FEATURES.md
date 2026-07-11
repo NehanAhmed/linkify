@@ -80,14 +80,14 @@
 
 ## 6. Performance & Scaling
 
-- [ ] **Redis caching layer** — Cache top-N links in Redis (LRU eviction). Cache bust on update/delete. Sub-millisecond redirects for cached entries. Separate Redis for rate-limit counters.
+- [x] **Redis caching layer** — LRU-backed Redis cache for URL resolves via `ioredis`. `resolveUrl` checks cache before DB; writes bust the key. Configurable via `REDIS_URL` + `REDIS_CACHE_TTL` env vars. Gracefully degrades when Redis is unavailable.
 - [ ] **CDN edge redirects** — Deploy redirect logic to Cloudflare Workers or Lambda@Edge. Edge responds with 301/302 without reaching origin. Origin only for uncached misses and API requests.
-- [ ] **Database read replicas** — Route read queries (list, search, stats) to read replicas. Writes and critical reads (resolve) go to primary. Configurable via Drizzle's `withReplica`.
+- [x] **Database read replicas** — Optional `DATABASE_REPLICA_URL` env var. When set, read queries (list, search, stats, CSV export) route to the replica via `dbReplica` Drizzle instance. Writes and `resolveUrl` always use the primary.
 - [ ] **Connection pooling** — Use PgBouncer in transaction mode or Neon's built-in pooled connection string. Prevent connection exhaustion under load.
-- [ ] **Database indexing audit** — Review all query patterns and add missing composite indexes. Partial indexes for soft-delete filtering, covering indexes for stats queries.
-- [ ] **Response compression** — Enable `compression` middleware for gzip/brotli on API responses (especially CSV exports > 1MB).
-- [ ] **Streaming CSV exports** — Stream large CSV exports row-by-row instead of buffering in memory. Use `res.write()` with batch queries.
-- [ ] **Lazy analytics computation** — Defer hourly/daily stats aggregation to background jobs. Pre-compute and cache stats. Update on write, serve from cache on read.
+- [x] **Database indexing audit** — Composite indexes added: `urls(user_id, deleted_at)`, `urls(deleted_at)`, `visits(code, visited_at)`, `visits(fingerprint, code, visited_at)`.
+- [x] **Response compression** — `compression` middleware enabled for gzip/brotli on all responses.
+- [x] **Streaming CSV exports** — Paginated batch writes (500 rows/page) via `res.write()` instead of buffering all rows in memory.
+- [x] **Lazy analytics computation** — Pre-computed `url_stats_hourly` table upserted on every visit. Stats endpoint reads from the aggregated table instead of scanning raw visits.
 - [ ] **HTTP/2 server** — Enable HTTP/2 via Node.js `http2` module for multiplexed connections and reduced latency.
 
 ---

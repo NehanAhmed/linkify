@@ -1,6 +1,7 @@
 import express from 'express'
 import helmet from 'helmet'
 import cors from 'cors'
+import compression from 'compression'
 import cookieParser from 'cookie-parser'
 import pinoHttp from 'pino-http'
 import * as Sentry from '@sentry/node'
@@ -27,6 +28,7 @@ const allowedOrigins = env.CORS_ORIGINS
 
 app.use(helmet())
 app.use(cors({ origin: allowedOrigins }))
+app.use(compression())
 app.use(cookieParser())
 app.use(pinoHttp({ logger }))
 app.use(express.json({ limit: '1mb' }))
