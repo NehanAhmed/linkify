@@ -12,6 +12,7 @@ export const updateLinkSettingsSchema = z.object({
   activeAt: z.string().datetime({ message: 'activeAt must be an ISO 8601 date' }).optional().nullable(),
   expiresAt: z.string().datetime({ message: 'expiresAt must be an ISO 8601 date' }).optional().nullable(),
   password: z.string().min(4).max(128).optional().nullable(),
+  blockBots: z.boolean().optional(),
 }).strict()
 
 export const bulkOperationSchema = z.object({

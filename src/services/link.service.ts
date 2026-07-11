@@ -119,6 +119,9 @@ export async function updateLinkSettings(code: string, userId: string, input: Up
   if (input.password !== undefined) {
     updates.passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
   }
+  if (input.blockBots !== undefined) {
+    updates.blockBots = input.blockBots
+  }
 
   if (Object.keys(updates).length === 0) return
 

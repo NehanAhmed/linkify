@@ -10,6 +10,8 @@ import * as urlService from '../services/url.services'
 import { verifyLinkAccessToken, resolveChain } from '../services/link.service'
 import { AppError } from '../utils/AppError'
 import { logActionFromReq } from '../services/audit.service'
+import { isBot } from '../utils/botDetection'
+import { logger } from '../utils/logger'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -75,6 +77,7 @@ export async function getUrlInfo(req: Request, res: Response, next: NextFunction
         expiresAt: url.expiresAt?.toISOString() ?? null,
         activeAt: url.activeAt?.toISOString() ?? null,
         hasPassword: !!url.passwordHash,
+        blockBots: url.blockBots,
         createdAt: url.createdAt.toISOString(),
       },
     })
@@ -132,6 +135,9 @@ export async function deleteUrl(req: Request, res: Response, next: NextFunction)
   try {
     const { code } = getUrlParamsSchema.parse(req.params)
     await urlService.deleteUrl(code, req.user!.id, req.user!.role === 'admin')
+    logActionFromReq(req, 'url.deleted', 'url', code).catch((err) => {
+      logger.error({ err, code }, 'Failed to persist audit log for URL deletion')
+    })
     res.json({ success: true, message: 'URL soft deleted successfully' })
   } catch (err) {
     next(err)
@@ -160,6 +166,19 @@ export async function rootRedirect(req: Request, res: Response, next: NextFuncti
 
 async function performRedirect(code: string, req: Request, res: Response) {
   const url = await urlService.resolveUrl(code)
+
+  if (url.blockBots) {
+    const ua = req.headers['user-agent']
+    const botResult = isBot(ua, req.ip)
+    if (botResult.isBot) {
+      res.status(403).json({
+        success: false,
+        error: 'Automated requests are not allowed for this link',
+        code: 'BOTS_BLOCKED',
+      })
+      return
+    }
+  }
 
   if (url.passwordHash) {
     const token = req.query.token as string | undefined

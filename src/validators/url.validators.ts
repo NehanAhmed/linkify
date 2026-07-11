@@ -51,6 +51,7 @@ export const createUrlSchema = z.object({
     .string()
     .datetime({ message: 'activeAt must be an ISO 8601 date' })
     .optional(),
+  blockBots: z.boolean().optional(),
   tags: z
     .array(z.string().min(1).max(50))
     .max(10, 'Max 10 tags per link')

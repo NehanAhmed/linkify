@@ -20,6 +20,7 @@ const envSchema = z.object({
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
   CSRF_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
+  FINGERPRINT_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
 })
 
 function validateEnv() {

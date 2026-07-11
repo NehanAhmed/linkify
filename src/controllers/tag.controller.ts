@@ -7,11 +7,13 @@ import {
 } from '../validators/tag.validators'
 import { paginationSchema } from '../validators/url.validators'
 import * as tagsService from '../services/tags.service'
+import { logActionFromReq } from '../services/audit.service'
 
 export async function createTag(req: Request, res: Response, next: NextFunction) {
   try {
     const input = createTagSchema.parse(req.body)
     const result = await tagsService.createTag(req.user!.id, input)
+    await logActionFromReq(req, 'tag.created', 'tag', String(result.id), { name: input.name })
     res.status(201).json({ success: true, data: result })
   } catch (err) {
     next(err)
@@ -32,6 +34,7 @@ export async function updateTag(req: Request, res: Response, next: NextFunction)
     const { id } = tagParamsSchema.parse(req.params)
     const input = updateTagSchema.parse(req.body)
     const result = await tagsService.updateTag(id, req.user!.id, input)
+    await logActionFromReq(req, 'tag.updated', 'tag', String(id), { name: input.name })
     res.json({ success: true, data: result })
   } catch (err) {
     next(err)
@@ -42,6 +45,7 @@ export async function deleteTag(req: Request, res: Response, next: NextFunction)
   try {
     const { id } = tagParamsSchema.parse(req.params)
     await tagsService.deleteTag(id, req.user!.id)
+    await logActionFromReq(req, 'tag.deleted', 'tag', String(id))
     res.json({ success: true, message: 'Tag deleted successfully' })
   } catch (err) {
     next(err)
