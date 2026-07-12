@@ -26,7 +26,6 @@ export const RESERVED_CODES = new Set([
   'node',
   'dist',
   'src',
-  'assets',
   'uploads',
   'files',
   'images',

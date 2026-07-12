@@ -12,6 +12,4 @@ export function generateShortCode(length: number = CODE_LENGTH): string {
   return code
 }
 
-export function generateCustomCode(slug: string): string {
-  return slug.trim().replace(/\s+/g, '-').toLowerCase()
-}
+

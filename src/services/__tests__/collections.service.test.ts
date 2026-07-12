@@ -4,7 +4,7 @@ import { AppError } from '../../utils/AppError'
 const { mockQb, mockTxQb, mockTx, mockDb, resetQb, resolveFn, txResolveFn } = vi.hoisted(() => {
   function makeQb(): { qb: Record<string, any>; rfn: any } {
     const qb: Record<string, any> = {}
-    const chainable = ['from', 'where', 'limit', 'orderBy', 'offset', 'values', 'set', 'delete', 'update']
+    const chainable = ['from', 'where', 'limit', 'orderBy', 'offset', 'values', 'set', 'delete', 'update', 'innerJoin', 'groupBy']
 
     const rfn = vi.fn()
     rfn.mockResolvedValue([])

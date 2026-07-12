@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { mockQb, mockDb, resetQb, resolveFn } = vi.hoisted(() => {
   const qb: Record<string, any> = {}
-  const chainable = ['from', 'where', 'limit', 'values', 'set', 'delete', 'orderBy', 'offset', 'innerJoin', 'leftJoin']
+  const chainable = ['from', 'where', 'limit', 'values', 'set', 'delete', 'orderBy', 'offset', 'innerJoin', 'leftJoin', 'groupBy']
   for (const m of chainable) qb[m] = vi.fn(() => qb)
   const resolveFn = vi.fn()
   resolveFn.mockResolvedValue([])
@@ -123,11 +123,9 @@ describe('getUsers', () => {
     resolveFn
       .mockResolvedValueOnce([{ total: 2 }])
       .mockResolvedValueOnce([
-        { id: 'user-1', email: 'a@b.com', role: 'admin', suspendedAt: null, createdAt: new Date() },
-        { id: 'user-2', email: 'c@d.com', role: 'user', suspendedAt: null, createdAt: new Date() },
+        { id: 'user-1', email: 'a@b.com', role: 'admin', suspendedAt: null, createdAt: new Date(), linkCount: 5 },
+        { id: 'user-2', email: 'c@d.com', role: 'user', suspendedAt: null, createdAt: new Date(), linkCount: 3 },
       ])
-      .mockResolvedValueOnce([{ total: 5 }])
-      .mockResolvedValueOnce([{ total: 3 }])
 
     const result = await adminService.getUsers(1, 20)
 

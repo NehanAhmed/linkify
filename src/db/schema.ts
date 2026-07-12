@@ -24,6 +24,7 @@ export const apiKeys = pgTable('api_keys', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   keyHash: text('key_hash').notNull(),
+  keyPrefix: text('key_prefix').notNull(),
   name: text('name').notNull(),
   scopes: text('scopes').array(),
   allowedIps: text('allowed_ips').array(),

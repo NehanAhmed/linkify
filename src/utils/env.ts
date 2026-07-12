@@ -1,14 +1,16 @@
 import { z } from 'zod'
-import { randomBytes } from 'crypto'
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   PORT: z.coerce.number().int().positive().default(3000),
-  BASE_URL: z.string().default('http://localhost:3000'),
-  CORS_ORIGINS: z.string().default('*'),
-  SUPABASE_URL: z.string().default('https://pobqjltfdfhbpocjnhbe.supabase.co'),
+  BASE_URL: z.string().min(1, 'BASE_URL is required'),
+  CORS_ORIGINS: z.string().optional(),
+  SUPABASE_URL: z.string().min(1, 'SUPABASE_URL is required'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
-  LINK_ACCESS_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
+  LINK_ACCESS_SECRET: z.string().min(1, 'LINK_ACCESS_SECRET is required'),
+  ENCRYPTION_KEY: z.string().min(1, 'ENCRYPTION_KEY is required'),
+  CSRF_SECRET: z.string().min(1, 'CSRF_SECRET is required'),
+  FINGERPRINT_SECRET: z.string().min(1, 'FINGERPRINT_SECRET is required'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   HEALTH_CHECK_INTERVAL_MS: z.coerce.number().int().min(0).default(3_600_000),
@@ -16,21 +18,19 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
   SENTRY_DSN: z.string().optional(),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  ENCRYPTION_KEY: z.string().default(() => randomBytes(32).toString('hex')),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(3),
-  CSRF_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
-  FINGERPRINT_SECRET: z.string().default(() => randomBytes(32).toString('hex')),
   REDIS_URL: z.string().optional(),
   REDIS_CACHE_TTL: z.coerce.number().int().positive().default(300),
   DATABASE_REPLICA_URL: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_FREE: z.string().optional(),
-  STRIPE_PRICE_PRO: z.string().default(''),
+  STRIPE_PRICE_PRO: z.string().optional(),
   STRIPE_PRICE_ENTERPRISE: z.string().optional(),
-  BILLING_SUCCESS_URL: z.string().default('http://localhost:3000/billing/success'),
-  BILLING_CANCEL_URL: z.string().default('http://localhost:3000/billing/cancel'),
+  BILLING_SUCCESS_URL: z.string().optional(),
+  BILLING_CANCEL_URL: z.string().optional(),
+  BILLING_RETURN_URL: z.string().optional(),
 
   // Feature flags
   FEATURE_BULK_OPERATIONS: z.enum(['enabled', 'disabled']).default('enabled'),
@@ -48,12 +48,22 @@ const envSchema = z.object({
 function validateEnv() {
   const result = envSchema.safeParse(process.env)
   if (!result.success) {
-    if (process.env.NODE_ENV === 'test') {
-      throw new Error(`Invalid environment variables: ${result.error.message}`)
+    const missing = result.error.issues.filter(i => i.code === 'invalid_type' && i.message.includes('Required'))
+    const other = result.error.issues.filter(i => !(i.code === 'invalid_type' && i.message.includes('Required')))
+    if (missing.length > 0) {
+      console.error('Missing required environment variables:')
+      for (const issue of missing) {
+        console.error(`  - ${issue.path.join('.')}`)
+      }
     }
-    console.error('Invalid environment variables:')
-    for (const issue of result.error.issues) {
-      console.error(`  - ${issue.path.join('.')}: ${issue.message}`)
+    if (other.length > 0) {
+      console.error('Invalid environment variables:')
+      for (const issue of other) {
+        console.error(`  - ${issue.path.join('.')}: ${issue.message}`)
+      }
+    }
+    if (process.env.NODE_ENV === 'test') {
+      throw new Error(`Invalid environment variables`)
     }
     process.exit(1)
   }

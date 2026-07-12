@@ -15,6 +15,8 @@ import { env } from './utils/env'
 
 const app = express()
 
+app.set('trust proxy', 1)
+
 if (env.SENTRY_DSN) {
   Sentry.init({
     dsn: env.SENTRY_DSN,
