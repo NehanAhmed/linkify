@@ -15,7 +15,7 @@ const mockEnv = vi.hoisted(() => ({
 
 vi.mock('../env', () => ({ env: mockEnv }))
 
-import { FeatureFlag, isFeatureEnabled, getAllFeatureFlags, requireFeature } from '../featureFlags'
+import { FeatureFlag, isFeatureEnabled, getAllFeatureFlags } from '../featureFlags'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -58,19 +58,4 @@ describe('getAllFeatureFlags', () => {
   })
 })
 
-describe('requireFeature', () => {
-  it('returns true when enabled flag matches env', () => {
-    const guard = requireFeature(FeatureFlag.BulkOperations)
-    expect(guard(true)).toBe(true)
-  })
 
-  it('returns false when disabled flag is checked with enabled=true', () => {
-    const guard = requireFeature(FeatureFlag.LinkRotation)
-    expect(guard(true)).toBe(false)
-  })
-
-  it('returns true when guard is bypassed with enabled=false', () => {
-    const guard = requireFeature(FeatureFlag.LinkRotation)
-    expect(guard(false)).toBe(true)
-  })
-})

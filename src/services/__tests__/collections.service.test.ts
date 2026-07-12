@@ -120,15 +120,25 @@ describe('createCollection', () => {
 
 describe('listCollections', () => {
   it('lists all collections for a user', async () => {
-    resolveFn.mockResolvedValueOnce([
-      { id: 1, name: 'A', parentId: null, sortOrder: 0, createdAt: new Date('2024-01-01') },
-    ])
-    resolveFn.mockResolvedValueOnce([{ total: 0 }])
+    resolveFn
+      .mockResolvedValueOnce([{ total: 2 }])
+      .mockResolvedValueOnce([
+        { id: 1, name: 'A', parentId: null, sortOrder: 0, createdAt: new Date('2024-01-01') },
+        { id: 2, name: 'B', parentId: null, sortOrder: 1, createdAt: new Date('2024-01-02') },
+      ])
+      .mockResolvedValueOnce([
+        { collectionId: 1, total: 3 },
+        { collectionId: 2, total: 5 },
+      ])
 
     const result = await listCollections('user-1')
 
-    expect(result).toHaveLength(1)
-    expect(result[0].name).toBe('A')
+    expect(result.collections).toHaveLength(2)
+    expect(result.pagination.total).toBe(2)
+    expect(result.collections[0].name).toBe('A')
+    expect(result.collections[0].urlCount).toBe(3)
+    expect(result.collections[1].name).toBe('B')
+    expect(result.collections[1].urlCount).toBe(5)
   })
 })
 

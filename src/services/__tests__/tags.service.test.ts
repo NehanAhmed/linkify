@@ -80,12 +80,23 @@ describe('createTag', () => {
 
 describe('listTags', () => {
   it('lists all tags for a user', async () => {
-    resolveFn.mockResolvedValueOnce([])
-    resolveFn.mockResolvedValueOnce([{ total: 0 }])
+    resolveFn
+      .mockResolvedValueOnce([{ total: 2 }])
+      .mockResolvedValueOnce([
+        { id: 1, name: 'a', color: '#fff', createdAt: new Date('2024-01-01') },
+        { id: 2, name: 'b', color: '#000', createdAt: new Date('2024-01-02') },
+      ])
+      .mockResolvedValueOnce([
+        { tagId: 1, total: 3 },
+        { tagId: 2, total: 5 },
+      ])
 
     const result = await listTags('user-1')
 
-    expect(result).toHaveLength(0)
+    expect(result.tags).toHaveLength(2)
+    expect(result.pagination.total).toBe(2)
+    expect(result.tags[0].urlCount).toBe(3)
+    expect(result.tags[1].urlCount).toBe(5)
   })
 })
 

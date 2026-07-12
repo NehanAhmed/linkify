@@ -218,24 +218,28 @@ async function upsertSubscription(stripeSub: Stripe.Subscription, userId: string
     .where(eq(subscriptions.stripeSubscriptionId, stripeSub.id))
     .limit(1)
 
-  const sub = stripeSub as unknown as Record<string, unknown>
-  const customer = sub.customer
+  const customer = stripeSub.customer
   const stripeCustomerId: string | null = typeof customer === 'string'
     ? customer
-    : (customer && typeof customer === 'object' && 'id' in (customer as Record<string, unknown>)
-        ? (customer as Record<string, unknown>).id as string
-        : null)
+    : customer?.id ?? null
+
+  // Stripe.Subscription TS type omits some fields present at runtime
+  const sub = stripeSub as Stripe.Subscription & {
+    current_period_start?: number
+    current_period_end?: number
+    trial_end?: number | null
+  }
 
   const values = {
     userId,
     planId,
     stripeSubscriptionId: stripeSub.id,
     stripeCustomerId,
-    status: String(sub.status ?? ''),
-    currentPeriodStart: sub.current_period_start ? new Date(Number(sub.current_period_start) * 1000) : null,
-    currentPeriodEnd: sub.current_period_end ? new Date(Number(sub.current_period_end) * 1000) : null,
-    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-    trialEnd: sub.trial_end ? new Date(Number(sub.trial_end) * 1000) : null,
+    status: stripeSub.status,
+    currentPeriodStart: sub.current_period_start ? new Date(sub.current_period_start * 1000) : null,
+    currentPeriodEnd: sub.current_period_end ? new Date(sub.current_period_end * 1000) : null,
+    cancelAtPeriodEnd: stripeSub.cancel_at_period_end,
+    trialEnd: sub.trial_end ? new Date(sub.trial_end * 1000) : null,
     updatedAt: new Date(),
   }
 

@@ -10,7 +10,6 @@ export function getStripe(): Stripe {
       throw new Error('STRIPE_SECRET_KEY is not configured')
     }
     stripeInstance = new Stripe(env.STRIPE_SECRET_KEY, {
-      apiVersion: '2025-04-10' as any,
       typescript: true,
     })
   }

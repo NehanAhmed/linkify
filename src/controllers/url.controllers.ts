@@ -218,6 +218,7 @@ async function performRedirect(code: string, req: Request, res: Response) {
     ipAddress: req.ip,
     userAgent: req.headers['user-agent'],
     referer: req.headers['referer'],
+    acceptLanguage: req.headers['accept-language'],
   }).catch(() => {})
 
   res.redirect(301, targetUrl)

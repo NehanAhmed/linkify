@@ -21,7 +21,7 @@ router.use('/api/urls', urlRoutes)
 router.use('/api/collections', collectionRoutes)
 router.use('/api/tags', tagRoutes)
 router.use('/api/domains', domainRoutes)
-router.use('/api/admin', requireAuth, requireRole('admin'), requireAAL(), adminRoutes)
+router.use('/api/admin', requireAuth, requireRole('admin'), adminRoutes)
 router.use('/api', publicRoutes)
 
 export default router

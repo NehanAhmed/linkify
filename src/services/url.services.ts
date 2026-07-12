@@ -157,12 +157,12 @@ export async function resolveUrl(code: string) {
   return row
 }
 
-export async function recordVisit(code: string, metadata: { ipAddress?: string; userAgent?: string; referer?: string }) {
+export async function recordVisit(code: string, metadata: { ipAddress?: string; userAgent?: string; referer?: string; acceptLanguage?: string }) {
   const ua = parseUserAgent(metadata.userAgent)
   const geo = lookupGeo(metadata.ipAddress)
   const referrerCategory = classifyReferrer(metadata.referer)
   const botResult = isBot(metadata.userAgent, metadata.ipAddress)
-  const fingerprint = createFingerprint(metadata.ipAddress, metadata.userAgent, undefined)
+  const fingerprint = createFingerprint(metadata.ipAddress, metadata.userAgent, metadata.acceptLanguage)
 
   let encryptedIp: string | null = null
   if (metadata.ipAddress) {
