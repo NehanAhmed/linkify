@@ -9,9 +9,10 @@ import {
 } from '../services/subscription.service'
 import { getStripe, isStripeConfigured } from '../services/stripe'
 import { AppError } from '../utils/AppError'
+import { env } from '../utils/env'
 import { db } from '../db'
 import { urls, visits } from '../db/schema'
-import { count, sql, eq, and } from 'drizzle-orm'
+import { count, sql, eq, and, isNull } from 'drizzle-orm'
 
 const checkoutSchema = z.object({
   planCode: z.enum(['free', 'pro', 'enterprise']),
@@ -55,7 +56,7 @@ export async function getPortalLink(_req: Request, res: Response, next: NextFunc
 
     const session = await stripe.billingPortal.sessions.create({
       customer: sub.stripeCustomerId,
-      return_url: process.env.BILLING_RETURN_URL || 'http://localhost:3000',
+      return_url: env.BILLING_RETURN_URL || env.BASE_URL,
     })
 
     res.json({ success: true, data: { url: session.url } })
@@ -113,7 +114,7 @@ export async function getUsageStats(req: Request, res: Response, next: NextFunct
       .select({ total: count() })
       .from(visits)
       .innerJoin(urls, eq(visits.code, urls.code))
-      .where(eq(urls.userId, userId))
+      .where(and(eq(urls.userId, userId), isNull(urls.deletedAt)))
 
     const plan = await getUserPlan(userId)
 

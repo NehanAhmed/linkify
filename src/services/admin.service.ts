@@ -1,6 +1,7 @@
 import { db } from '../db'
 import { users, urls, visits, subscriptions, plans, auditLog, usageQuota } from '../db/schema'
 import { count, sql, eq, and, inArray, desc, gte, lt, isNull } from 'drizzle-orm'
+
 import { AppError } from '../utils/AppError'
 import { getAllFeatureFlags } from '../utils/featureFlags'
 import { purgeExpiredUrls } from './url.services'
@@ -262,31 +263,24 @@ export async function getUsers(
       role: users.role,
       suspendedAt: users.suspendedAt,
       createdAt: users.createdAt,
+      linkCount: count(),
     })
     .from(users)
+    .leftJoin(urls, eq(urls.userId, users.id))
     .orderBy(desc(users.createdAt))
     .limit(limit)
     .offset(offset)
-
-  const usersWithCounts = await Promise.all(
-    rows.map(async (u) => {
-      const [linkCount] = await db
-        .select({ total: count() })
-        .from(urls)
-        .where(eq(urls.userId, u.id))
-      return {
-        id: u.id,
-        email: u.email,
-        role: u.role,
-        suspendedAt: u.suspendedAt?.toISOString() ?? null,
-        createdAt: u.createdAt.toISOString(),
-        linkCount: linkCount?.total ?? 0,
-      }
-    }),
-  )
+    .groupBy(users.id, users.email, users.role, users.suspendedAt, users.createdAt)
 
   return {
-    users: usersWithCounts,
+    users: rows.map((u) => ({
+      id: u.id,
+      email: u.email,
+      role: u.role,
+      suspendedAt: u.suspendedAt?.toISOString() ?? null,
+      createdAt: u.createdAt.toISOString(),
+      linkCount: u.linkCount,
+    })),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   }
 }

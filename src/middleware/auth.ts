@@ -4,7 +4,7 @@ import { AppError } from '../utils/AppError'
 import { env } from '../utils/env'
 import { db } from '../db'
 import { apiKeys } from '../db/schema'
-import { eq, or, isNull, gt } from 'drizzle-orm'
+import { eq, and, or, isNull, gt } from 'drizzle-orm'
 import bcrypt from 'bcrypt'
 import type { AuthenticatedUser, UserRole } from '../types/auth.types'
 import { syncUser } from '../services/auth.services'
@@ -35,11 +35,16 @@ async function verifyJwt(token: string): Promise<AuthenticatedUser> {
 }
 
 async function verifyApiKey(token: string, ip?: string): Promise<AuthenticatedUser> {
+  const prefix = token.slice(0, 8)
+
   const keys = await db
     .select()
     .from(apiKeys)
     .where(
-      or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date())),
+      and(
+        eq(apiKeys.keyPrefix, prefix),
+        or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date())),
+      ),
     )
 
   for (const key of keys) {

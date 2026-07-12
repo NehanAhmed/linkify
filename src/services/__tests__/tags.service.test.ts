@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const { mockQb, mockDb, resetQb, resolveFn } = vi.hoisted(() => {
   const qb: Record<string, any> = {}
-  const chainable = ['from', 'where', 'limit', 'orderBy', 'offset', 'values', 'set', 'delete']
+  const chainable = ['from', 'where', 'limit', 'orderBy', 'offset', 'values', 'set', 'delete', 'innerJoin', 'groupBy']
 
   for (const m of chainable) {
     qb[m] = vi.fn(() => qb)

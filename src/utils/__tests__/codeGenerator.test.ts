@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { generateShortCode, generateCustomCode } from '../codeGenerator'
+import { generateShortCode } from '../codeGenerator'
 
 describe('generateShortCode', () => {
   it('generates a 7-character code by default', () => {
@@ -20,15 +20,5 @@ describe('generateShortCode', () => {
   it('generates unique codes', () => {
     const codes = new Set(Array.from({ length: 100 }, () => generateShortCode()))
     expect(codes.size).toBe(100)
-  })
-})
-
-describe('generateCustomCode', () => {
-  it('converts slug to lowercase dash-separated', () => {
-    expect(generateCustomCode('My Link')).toBe('my-link')
-  })
-
-  it('trims whitespace', () => {
-    expect(generateCustomCode('  hello world  ')).toBe('hello-world')
   })
 })

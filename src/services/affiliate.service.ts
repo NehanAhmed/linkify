@@ -50,11 +50,6 @@ export async function removeAffiliate(code: string, userId: string) {
 }
 
 export async function getAffiliateReport(userId: string, fromDate: string, toDate: string) {
-  const [existing] = await db
-    .select({ planCode: sql<string>`'pro'` })
-    .from(visits)
-    .limit(1)
-
   const plan = await getUserPlan(userId)
   if (!plan.features.affiliateLinks) {
     throw new AppError('Affiliate links are not available on your plan', 403, 'FEATURE_NOT_AVAILABLE')

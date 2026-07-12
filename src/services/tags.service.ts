@@ -35,22 +35,23 @@ export async function listTags(userId: string) {
     .where(eq(tags.userId, userId))
     .orderBy(tags.name)
 
-  const tagsWithCounts = await Promise.all(
-    rows.map(async (tag) => {
-      const [urlCountResult] = await db
-        .select({ total: count() })
-        .from(urlTags)
-        .where(eq(urlTags.tagId, tag.id))
+  const urlCounts = await db
+    .select({
+      tagId: urlTags.tagId,
+      total: count(),
+    })
+    .from(urlTags)
+    .innerJoin(tags, eq(urlTags.tagId, tags.id))
+    .where(eq(tags.userId, userId))
+    .groupBy(urlTags.tagId)
 
-      return {
-        ...tag,
-        createdAt: tag.createdAt.toISOString(),
-        urlCount: urlCountResult?.total ?? 0,
-      }
-    }),
-  )
+  const countMap = new Map(urlCounts.map((r) => [r.tagId, r.total]))
 
-  return tagsWithCounts
+  return rows.map((tag) => ({
+    ...tag,
+    createdAt: tag.createdAt.toISOString(),
+    urlCount: countMap.get(tag.id) ?? 0,
+  }))
 }
 
 export async function updateTag(id: number, userId: string, input: UpdateTagInput) {

@@ -142,10 +142,12 @@ export async function createApiKey(
 ) {
   const raw = `linkify_${randomBytes(32).toString('hex')}`
   const keyHash = await bcrypt.hash(raw, 12)
+  const keyPrefix = raw.slice(0, 8)
 
   const [result] = await db.insert(apiKeys).values({
     userId,
     keyHash,
+    keyPrefix,
     name,
     scopes: scopes ?? null,
     allowedIps: allowedIps ?? null,

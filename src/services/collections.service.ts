@@ -43,22 +43,23 @@ export async function listCollections(userId: string) {
     .where(eq(collections.userId, userId))
     .orderBy(collections.sortOrder, collections.createdAt)
 
-  const collectionsWithCounts = await Promise.all(
-    rows.map(async (col) => {
-      const [urlCountResult] = await db
-        .select({ total: count() })
-        .from(urlCollections)
-        .where(eq(urlCollections.collectionId, col.id))
+  const urlCounts = await db
+    .select({
+      collectionId: urlCollections.collectionId,
+      total: count(),
+    })
+    .from(urlCollections)
+    .innerJoin(collections, eq(urlCollections.collectionId, collections.id))
+    .where(eq(collections.userId, userId))
+    .groupBy(urlCollections.collectionId)
 
-      return {
-        ...col,
-        createdAt: col.createdAt.toISOString(),
-        urlCount: urlCountResult?.total ?? 0,
-      }
-    }),
-  )
+  const countMap = new Map(urlCounts.map((r) => [r.collectionId, r.total]))
 
-  return collectionsWithCounts
+  return rows.map((col) => ({
+    ...col,
+    createdAt: col.createdAt.toISOString(),
+    urlCount: countMap.get(col.id) ?? 0,
+  }))
 }
 
 export async function getCollection(id: number, userId: string) {

@@ -18,7 +18,6 @@ export const BLOCKLIST_PATTERNS: RegExp[] = [
   /\bpaypa[li0]/i,
   /\bpaypa[l1]s[a4]f[e3]/i,
   /\bg00gle\b/i,
-  /\bg00gle\b/i,
   /\bgo0gle\b/i,
   /\bfac3book\b/i,
   /\bfaceb00k\b/i,

@@ -15,7 +15,6 @@ function normalizeUrl(val: string): string {
   // Normalize internationalized domain names to Punycode
   try {
     const parsed = new URL(val)
-    parsed.hostname = parsed.hostname
     return parsed.toString()
   } catch {
     return val
@@ -83,10 +82,6 @@ export const paginationSchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(10),
 }).strict()
 
-export const statsQuerySchema = z.object({
-  period: z.enum(['24h', '7d', '30d', 'all']).default('7d'),
-}).strict()
-
 export const listUrlsQuerySchema = paginationSchema.extend({
   q: z.string().max(256).optional(),
   createdAfter: z.string().datetime({ message: 'createdAfter must be an ISO 8601 date' }).optional(),
@@ -94,7 +89,7 @@ export const listUrlsQuerySchema = paginationSchema.extend({
   minVisits: z.coerce.number().int().min(0).optional(),
   sortBy: z.enum(['createdAt', 'visits', 'code']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-  tagIds: z.string().transform((s) => s.split(',').map(Number).filter((n) => !isNaN(n))).optional(),
+  tagIds: z.string().transform((s) => s ? s.split(',').map(Number).filter((n) => !isNaN(n)) : undefined).optional(),
   collectionId: z.coerce.number().int().positive().optional(),
   hasPassword: z.coerce.boolean().optional(),
   isActive: z.coerce.boolean().optional(),
@@ -104,5 +99,4 @@ export type CreateUrlInput = z.infer<typeof createUrlSchema>
 export type CreateUrlBulkInput = z.infer<typeof createUrlBulkSchema>
 export type GetUrlParams = z.infer<typeof getUrlParamsSchema>
 export type PaginationInput = z.infer<typeof paginationSchema>
-export type StatsQueryInput = z.infer<typeof statsQuerySchema>
 export type ListUrlsQueryInput = z.infer<typeof listUrlsQuerySchema>
