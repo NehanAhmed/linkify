@@ -23,7 +23,16 @@ export async function createTag(userId: string, input: CreateTagInput) {
   return result
 }
 
-export async function listTags(userId: string) {
+export async function listTags(userId: string, page: number = 1, limit: number = 50) {
+  const offset = (page - 1) * limit
+
+  const [totalResult] = await db
+    .select({ total: count() })
+    .from(tags)
+    .where(eq(tags.userId, userId))
+
+  const total = totalResult?.total ?? 0
+
   const rows = await db
     .select({
       id: tags.id,
@@ -34,6 +43,8 @@ export async function listTags(userId: string) {
     .from(tags)
     .where(eq(tags.userId, userId))
     .orderBy(tags.name)
+    .limit(limit)
+    .offset(offset)
 
   const urlCounts = await db
     .select({
@@ -47,11 +58,14 @@ export async function listTags(userId: string) {
 
   const countMap = new Map(urlCounts.map((r) => [r.tagId, r.total]))
 
-  return rows.map((tag) => ({
-    ...tag,
-    createdAt: tag.createdAt.toISOString(),
-    urlCount: countMap.get(tag.id) ?? 0,
-  }))
+  return {
+    tags: rows.map((tag) => ({
+      ...tag,
+      createdAt: tag.createdAt.toISOString(),
+      urlCount: countMap.get(tag.id) ?? 0,
+    })),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  }
 }
 
 export async function updateTag(id: number, userId: string, input: UpdateTagInput) {

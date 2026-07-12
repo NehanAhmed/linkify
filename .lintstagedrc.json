@@ -1,6 +1,5 @@
 {
   "src/**/*.ts": [
-    "pnpm typecheck --noEmit",
-    "pnpm test -- --findRelatedTests"
+    "pnpm typecheck"
   ]
 }

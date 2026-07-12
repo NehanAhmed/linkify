@@ -30,7 +30,16 @@ export async function createCollection(userId: string, input: CreateCollectionIn
   return result
 }
 
-export async function listCollections(userId: string) {
+export async function listCollections(userId: string, page: number = 1, limit: number = 50) {
+  const offset = (page - 1) * limit
+
+  const [totalResult] = await db
+    .select({ total: count() })
+    .from(collections)
+    .where(eq(collections.userId, userId))
+
+  const total = totalResult?.total ?? 0
+
   const rows = await db
     .select({
       id: collections.id,
@@ -42,6 +51,8 @@ export async function listCollections(userId: string) {
     .from(collections)
     .where(eq(collections.userId, userId))
     .orderBy(collections.sortOrder, collections.createdAt)
+    .limit(limit)
+    .offset(offset)
 
   const urlCounts = await db
     .select({
@@ -55,11 +66,14 @@ export async function listCollections(userId: string) {
 
   const countMap = new Map(urlCounts.map((r) => [r.collectionId, r.total]))
 
-  return rows.map((col) => ({
-    ...col,
-    createdAt: col.createdAt.toISOString(),
-    urlCount: countMap.get(col.id) ?? 0,
-  }))
+  return {
+    collections: rows.map((col) => ({
+      ...col,
+      createdAt: col.createdAt.toISOString(),
+      urlCount: countMap.get(col.id) ?? 0,
+    })),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  }
 }
 
 export async function getCollection(id: number, userId: string) {

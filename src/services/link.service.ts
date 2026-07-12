@@ -34,7 +34,7 @@ export async function setPassword(code: string, userId: string, password: string
   }
 
   const passwordHash = await bcrypt.hash(password, 12)
-  await db.update(urls).set({ passwordHash }).where(eq(urls.code, code))
+  await db.update(urls).set({ passwordHash, passwordSetAt: new Date() }).where(eq(urls.code, code))
 
   await logAction(userId, 'url.password_set', 'url', code)
   cacheDel(buildCacheKeyForUrl(code)).catch(() => {})
@@ -62,7 +62,7 @@ export async function removePassword(code: string, userId: string) {
 
 export async function verifyPasswordReturnToken(code: string, password: string): Promise<string> {
   const [row] = await db
-    .select({ passwordHash: urls.passwordHash })
+    .select({ passwordHash: urls.passwordHash, passwordSetAt: urls.passwordSetAt })
     .from(urls)
     .where(and(eq(urls.code, code), isNull(urls.deletedAt)))
     .limit(1)
@@ -72,6 +72,18 @@ export async function verifyPasswordReturnToken(code: string, password: string):
   }
   if (!row.passwordHash) {
     throw new AppError('No password set on this link', 400, 'NO_PASSWORD')
+  }
+
+  const maxAgeDays = env.PASSWORD_MAX_AGE_DAYS
+  if (maxAgeDays > 0 && row.passwordSetAt) {
+    const ageDays = (Date.now() - new Date(row.passwordSetAt).getTime()) / 86_400_000
+    if (ageDays > maxAgeDays) {
+      throw new AppError(
+        'This link password has expired. Please contact the link owner.',
+        403,
+        'PASSWORD_EXPIRED',
+      )
+    }
   }
 
   const match = await bcrypt.compare(password, row.passwordHash)

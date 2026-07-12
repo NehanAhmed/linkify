@@ -46,6 +46,7 @@ export const urls = pgTable(
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' }),
     passwordHash: text('password_hash'),
+    passwordSetAt: timestamp('password_set_at'),
     blockBots: boolean('block_bots').default(false).notNull(),
     activeAt: timestamp('active_at'),
     expiresAt: timestamp('expires_at'),

@@ -11,6 +11,7 @@ const envSchema = z.object({
   ENCRYPTION_KEY: z.string().min(1, 'ENCRYPTION_KEY is required'),
   CSRF_SECRET: z.string().min(1, 'CSRF_SECRET is required'),
   FINGERPRINT_SECRET: z.string().min(1, 'FINGERPRINT_SECRET is required'),
+  PASSWORD_MAX_AGE_DAYS: z.coerce.number().int().min(0).default(0),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
   HEALTH_CHECK_INTERVAL_MS: z.coerce.number().int().min(0).default(3_600_000),
@@ -70,5 +71,14 @@ function validateEnv() {
   return result.data
 }
 
-export const env = validateEnv()
+let validatedEnv: ReturnType<typeof validateEnv> | null = null
+
+export const env = new Proxy({} as ReturnType<typeof validateEnv>, {
+  get(target, prop) {
+    if (validatedEnv === null) {
+      validatedEnv = validateEnv()
+    }
+    return Reflect.get(validatedEnv!, prop)
+  },
+})
 export type Env = z.infer<typeof envSchema>

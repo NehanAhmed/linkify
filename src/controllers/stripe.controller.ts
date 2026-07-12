@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
+import type Stripe from 'stripe'
 import { getStripe, getStripeWebhookSecret, isStripeConfigured } from '../services/stripe'
 import { syncSubscription } from '../services/subscription.service'
 import { logger } from '../utils/logger'
@@ -18,6 +19,10 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
       throw new AppError('Missing stripe-signature header', 400, 'STRIPE_SIGNATURE_MISSING')
     }
 
+    if (!webhookSecret) {
+      throw new AppError('Stripe webhook secret is not configured', 500, 'STRIPE_WEBHOOK_NOT_CONFIGURED')
+    }
+
     let event
     try {
       event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
@@ -31,7 +36,7 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as { mode?: string; subscription?: string | { id: string } }
+        const session = event.data.object as Stripe.Checkout.Session
         if (session.mode === 'subscription' && session.subscription) {
           const subId = typeof session.subscription === 'string' ? session.subscription : session.subscription.id
           const subscription = await stripe.subscriptions.retrieve(subId)
@@ -41,10 +46,9 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
       }
 
       case 'invoice.paid': {
-        const invoice = event.data.object as { subscription?: string | { id: string } }
+        const invoice = event.data.object as Stripe.Invoice & { subscription?: string }
         if (invoice.subscription) {
-          const subId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription.id
-          const subscription = await stripe.subscriptions.retrieve(subId)
+          const subscription = await stripe.subscriptions.retrieve(invoice.subscription)
           await syncSubscription(subscription)
         }
         break
@@ -52,7 +56,7 @@ export async function handleWebhook(req: Request, res: Response, next: NextFunct
 
       case 'customer.subscription.updated':
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Parameters<typeof syncSubscription>[0]
+        const subscription = event.data.object as Stripe.Subscription
         await syncSubscription(subscription)
         break
       }

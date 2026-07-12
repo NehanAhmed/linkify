@@ -32,6 +32,10 @@ import adminRoutes from '../admin.routes'
 function createApp() {
   const app = express()
   app.use(express.json())
+  app.use((req, _res, next) => {
+    req.user = { id: 'admin-1', email: 'admin@test.com', role: 'admin', aal: 'aal2' } as never
+    next()
+  })
   app.use('/', adminRoutes)
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     if (err instanceof ZodError) {

@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import type { Request, Response, NextFunction } from 'express'
+import { requireAAL } from '../middleware/requireAAL'
 import {
   getDashboardStats,
   getUsers,
@@ -54,7 +55,7 @@ router.get('/users/:id', async (req: Request, res: Response, next: NextFunction)
   }
 })
 
-router.patch('/users/:id/role', async (req: Request, res: Response, next: NextFunction) => {
+router.patch('/users/:id/role', requireAAL(), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { role } = updateUserRoleSchema.parse(req.body)
     await updateUserRole(req.params.id as string, role)
@@ -64,7 +65,7 @@ router.patch('/users/:id/role', async (req: Request, res: Response, next: NextFu
   }
 })
 
-router.post('/users/:id/suspend', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/users/:id/suspend', requireAAL(), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await suspendUser(req.params.id as string)
     res.json({ success: true })
@@ -73,7 +74,7 @@ router.post('/users/:id/suspend', async (req: Request, res: Response, next: Next
   }
 })
 
-router.post('/users/:id/unsuspend', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/users/:id/unsuspend', requireAAL(), async (req: Request, res: Response, next: NextFunction) => {
   try {
     await unsuspendUser(req.params.id as string)
     res.json({ success: true })
@@ -138,7 +139,7 @@ router.get('/system/flags', async (_req: Request, res: Response, next: NextFunct
   }
 })
 
-router.post('/maintenance/purge-expired', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/maintenance/purge-expired', requireAAL(), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { daysOld } = purgeExpiredSchema.parse(req.body)
     const data = await triggerPurgeExpired(daysOld)
@@ -148,7 +149,7 @@ router.post('/maintenance/purge-expired', async (req: Request, res: Response, ne
   }
 })
 
-router.post('/maintenance/recheck-links', async (_req: Request, res: Response, next: NextFunction) => {
+router.post('/maintenance/recheck-links', requireAAL(), async (_req: Request, res: Response, next: NextFunction) => {
   try {
     const data = await triggerHealthCheck()
     res.json({ success: true, data })

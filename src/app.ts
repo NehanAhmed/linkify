@@ -3,6 +3,7 @@ import helmet from 'helmet'
 import cors from 'cors'
 import compression from 'compression'
 import cookieParser from 'cookie-parser'
+import rateLimit from 'express-rate-limit'
 import pinoHttp from 'pino-http'
 import * as Sentry from '@sentry/node'
 import stripeRoutes from './routes/stripe.routes'
@@ -41,7 +42,15 @@ app.use('/api', csrfProtection)
 
 app.use(routes)
 
-app.get('/:code(\\w{3,16})', rootRedirect)
+const redirectLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later' },
+})
+
+app.get('/:code(\\w{3,16})', redirectLimiter, rootRedirect)
 
 app.use(notFoundHandler)
 

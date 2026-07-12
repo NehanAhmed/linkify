@@ -22,7 +22,8 @@ export async function createTag(req: Request, res: Response, next: NextFunction)
 
 export async function listTags(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await tagsService.listTags(req.user!.id)
+    const { page, limit } = paginationSchema.parse(req.query)
+    const result = await tagsService.listTags(req.user!.id, page, limit)
     res.json({ success: true, data: result })
   } catch (err) {
     next(err)

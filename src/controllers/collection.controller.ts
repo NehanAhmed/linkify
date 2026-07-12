@@ -23,7 +23,8 @@ export async function createCollection(req: Request, res: Response, next: NextFu
 
 export async function listCollections(req: Request, res: Response, next: NextFunction) {
   try {
-    const result = await collectionsService.listCollections(req.user!.id)
+    const { page, limit } = paginationSchema.parse(req.query)
+    const result = await collectionsService.listCollections(req.user!.id, page, limit)
     res.json({ success: true, data: result })
   } catch (err) {
     next(err)

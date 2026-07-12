@@ -42,9 +42,4 @@ export function getAllFeatureFlags(): Record<string, { enabled: boolean; descrip
   return flags
 }
 
-export function requireFeature(flag: FeatureFlag) {
-  return (enabled: boolean) => {
-    if (!enabled) return true
-    return isFeatureEnabled(flag)
-  }
-}
+
