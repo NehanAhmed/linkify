@@ -1,15 +1,12 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "ES2022",
     "module": "commonjs",
     "rootDir": "./src",
     "outDir": "./dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
     "sourceMap": true,
     "resolveJsonModule": true,
-  "types": ["node"]
+    "types": ["node"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "drizzle.config.ts"]
