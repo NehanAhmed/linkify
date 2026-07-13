@@ -12,6 +12,11 @@
     "db:push": "pnpm --filter @linkify/api db:push",
     "db:studio": "pnpm --filter @linkify/api db:studio",
     "db:seed": "pnpm --filter @linkify/api db:seed",
+    "web:dev": "pnpm --filter @linkify/web dev",
+    "web:build": "pnpm --filter @linkify/web build",
+    "web:preview": "pnpm --filter @linkify/web preview",
+    "web:typecheck": "pnpm --filter @linkify/web typecheck",
+    "web:test": "pnpm --filter @linkify/web test",
     "prepare": "husky"
   },
   "packageManager": "pnpm@10.33.2",

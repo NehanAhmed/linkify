@@ -1,11 +1,11 @@
-import rateLimit from 'express-rate-limit'
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit'
 import type { Request } from 'express'
 import { env } from '../utils/env'
 
 const windowMs = env.RATE_LIMIT_WINDOW_MS
 const generalMax = env.RATE_LIMIT_MAX
 
-const standardKey = (req: Request) => req.ip ?? 'unknown'
+const standardKey = (req: Request) => ipKeyGenerator(req.ip ?? 'unknown')
 
 export const generalLimiter = rateLimit({
   windowMs,
@@ -37,7 +37,7 @@ export const bulkLimiter = rateLimit({
 export const passwordLimiter = rateLimit({
   windowMs: 60_000,
   max: 5,
-  keyGenerator: (req) => `${req.ip ?? 'unknown'}:${req.params.code ?? 'unknown'}`,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? 'unknown')}:${req.params.code ?? 'unknown'}`,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: 'Too many password attempts, please try again later' },

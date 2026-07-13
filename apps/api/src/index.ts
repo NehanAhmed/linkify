@@ -1,26 +1,33 @@
 import dotenv from 'dotenv'
-import path from 'path'
-dotenv.config({ path: path.resolve(__dirname, '../../.env') })
 
-import { env } from './utils/env'
-import { logger } from './utils/logger'
+dotenv.config({ path: '../../.env.local' })
 
-import app from './app'
 import { createServer } from 'http'
-import { startHealthCheckJob } from './jobs/healthCheckJob'
-import { seedPlans } from './jobs/seedPlans'
 
-const server = createServer(app)
+async function main() {
+  const { env } = await import('./utils/env')
+  const { logger } = await import('./utils/logger')
+  const { default: app } = await import('./app')
+  const { startHealthCheckJob } = await import('./jobs/healthCheckJob')
+  const { seedPlans } = await import('./jobs/seedPlans')
 
-server.listen(env.PORT, () => {
-  logger.info({ port: env.PORT }, 'Server started')
+  const server = createServer(app)
 
-  seedPlans().catch((err) => {
-    logger.error({ err }, 'Failed to seed plans on startup')
+  server.listen(env.PORT, () => {
+    logger.info({ port: env.PORT }, 'Server started')
+
+    seedPlans().catch((err) => {
+      logger.error({ err }, 'Failed to seed plans on startup')
+    })
+
+    if (env.HEALTH_CHECK_INTERVAL_MS > 0) {
+      startHealthCheckJob(env.HEALTH_CHECK_INTERVAL_MS)
+      logger.info({ interval: env.HEALTH_CHECK_INTERVAL_MS }, 'Health check job started')
+    }
   })
+}
 
-  if (env.HEALTH_CHECK_INTERVAL_MS > 0) {
-    startHealthCheckJob(env.HEALTH_CHECK_INTERVAL_MS)
-    logger.info({ interval: env.HEALTH_CHECK_INTERVAL_MS }, 'Health check job started')
-  }
+main().catch((err) => {
+  console.error('Failed to start server', err)
+  process.exit(1)
 })
