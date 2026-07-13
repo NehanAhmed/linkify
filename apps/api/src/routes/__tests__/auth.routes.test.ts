@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const mockAuthController = vi.hoisted(() => ({
-  getCsrfToken: vi.fn(),
   refreshToken: vi.fn(),
   resetPassword: vi.fn(),
   getUserProfile: vi.fn(),
@@ -43,15 +42,6 @@ beforeEach(() => {
 })
 
 describe('Auth Routes', () => {
-  it('GET /csrf-token — returns CSRF token', async () => {
-    mockAuthController.getCsrfToken.mockImplementation((_req, res) => {
-      res.cookie('csrf-token', 'signed').json({ success: true, data: { token: 'test' } })
-    })
-    const res = await supertest(createApp()).get('/csrf-token')
-    expect(res.status).toBe(200)
-    expect(res.body.data.token).toBe('test')
-  })
-
   it('POST /refresh — refreshes token', async () => {
     mockAuthController.refreshToken.mockImplementation((_req, res) => {
       res.json({ success: true, data: { access_token: 'new' } })

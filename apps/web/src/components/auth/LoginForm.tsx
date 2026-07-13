@@ -1,13 +1,11 @@
 import { useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
 import SocialButtons from "./SocialButtons"
 
-interface LoginFormProps {
-  onSuccess?: () => void
-}
-
-export default function LoginForm({ onSuccess }: LoginFormProps) {
+export default function LoginForm() {
   const { signIn } = useAuth()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -22,6 +20,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
     const { error: signInError } = await signIn(email, password)
     if (signInError) {
       setError(signInError)
+      toast.error(signInError)
       setIsLoading(false)
     }
   }
@@ -46,7 +45,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
           <label htmlFor="email" className="text-sm font-medium">
             Email
           </label>
-          <input
+          <Input
             id="email"
             type="email"
             placeholder="you@example.com"
@@ -54,7 +53,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -70,7 +68,7 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
               Forgot password?
             </Link>
           </div>
-          <input
+          <Input
             id="password"
             type="password"
             placeholder="Enter your password"
@@ -78,7 +76,6 @@ export default function LoginForm({ onSuccess }: LoginFormProps) {
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="current-password"
-            className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 

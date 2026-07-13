@@ -1,31 +1,24 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import AuthLayout from "@/components/auth/AuthLayout"
 import ResetPasswordForm from "@/components/auth/ResetPasswordForm"
 
 export default function ResetPasswordPage() {
-  const navigate = useNavigate()
   const [isValid, setIsValid] = useState(false)
   const [isChecking, setIsChecking] = useState(true)
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session) {
-        setIsValid(true)
-        setIsChecking(false)
-      } else {
-        setIsChecking(false)
-      }
-    })
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
         setIsValid(true)
       }
       setIsChecking(false)
     })
-  }, [navigate])
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
 
   if (isChecking) {
     return (

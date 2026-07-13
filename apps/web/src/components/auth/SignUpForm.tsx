@@ -1,7 +1,24 @@
-import { useState, type FormEvent } from "react"
+import { useState, useMemo, type FormEvent } from "react"
 import { Link } from "react-router-dom"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 import SocialButtons from "./SocialButtons"
+
+function getPasswordStrength(password: string): { label: string; level: number; color: string } {
+  let score = 0
+  if (password.length >= 8) score++
+  if (password.length >= 12) score++
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++
+  if (/\d/.test(password)) score++
+  if (/[^a-zA-Z0-9]/.test(password)) score++
+
+  if (score <= 1) return { label: "Weak", level: 0, color: "bg-destructive" }
+  if (score <= 2) return { label: "Fair", level: 1, color: "bg-orange-500" }
+  if (score <= 3) return { label: "Good", level: 2, color: "bg-yellow-500" }
+  return { label: "Strong", level: 3, color: "bg-emerald-500" }
+}
 
 export default function SignUpForm() {
   const { signUp } = useAuth()
@@ -11,13 +28,14 @@ export default function SignUpForm() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isVerificationSent, setIsVerificationSent] = useState(false)
+  const passwordStrength = useMemo(() => getPasswordStrength(password), [password])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters")
       return
     }
 
@@ -34,12 +52,14 @@ export default function SignUpForm() {
     )
     if (signUpError) {
       setError(signUpError)
+      toast.error(signUpError)
       setIsLoading(false)
       return
     }
 
     if (needsEmailVerification) {
       setIsVerificationSent(true)
+      toast.success("Verification email sent. Check your inbox.")
     }
     setIsLoading(false)
   }
@@ -88,7 +108,7 @@ export default function SignUpForm() {
           <label htmlFor="signup-email" className="text-sm font-medium">
             Email
           </label>
-          <input
+          <Input
             id="signup-email"
             type="email"
             placeholder="you@example.com"
@@ -96,7 +116,6 @@ export default function SignUpForm() {
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 
@@ -104,17 +123,34 @@ export default function SignUpForm() {
           <label htmlFor="signup-password" className="text-sm font-medium">
             Password
           </label>
-          <input
+          <Input
             id="signup-password"
             type="password"
-            placeholder="At least 6 characters"
+            placeholder="At least 8 characters"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={8}
             autoComplete="new-password"
-            className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
+          {password.length > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="flex h-1.5 flex-1 gap-1">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "h-full flex-1 rounded-full transition-colors",
+                      i <= passwordStrength.level
+                        ? passwordStrength.color
+                        : "bg-muted"
+                    )}
+                  />
+                ))}
+              </div>
+              <span className="text-xs text-muted-foreground">{passwordStrength.label}</span>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -124,7 +160,7 @@ export default function SignUpForm() {
           >
             Confirm password
           </label>
-          <input
+          <Input
             id="signup-confirm-password"
             type="password"
             placeholder="Repeat your password"
@@ -132,7 +168,6 @@ export default function SignUpForm() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             required
             autoComplete="new-password"
-            className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
           />
         </div>
 

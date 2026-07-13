@@ -48,21 +48,4 @@ export function fetchMe(token: string) {
   )
 }
 
-export function refreshToken(refreshToken: string) {
-  return request<{
-    access_token: string
-    refresh_token: string
-    expires_in: number
-    user: { id: string }
-  }>("/api/auth/refresh", {
-    method: "POST",
-    body: JSON.stringify({ refresh_token: refreshToken }),
-  })
-}
 
-export function requestPasswordReset(email: string) {
-  return request<{ message: string }>("/api/auth/reset-password", {
-    method: "POST",
-    body: JSON.stringify({ email }),
-  })
-}

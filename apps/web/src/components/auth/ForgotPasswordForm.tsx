@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from "react"
 import { Link } from "react-router-dom"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
 
 export default function ForgotPasswordForm() {
   const { resetPassword } = useAuth()
@@ -17,11 +19,13 @@ export default function ForgotPasswordForm() {
     const { error: resetError } = await resetPassword(email)
     if (resetError) {
       setError(resetError)
+      toast.error(resetError)
       setIsLoading(false)
       return
     }
 
     setIsSent(true)
+    toast.success("Password reset link sent. Check your email.")
     setIsLoading(false)
   }
 
@@ -54,7 +58,7 @@ export default function ForgotPasswordForm() {
         <label htmlFor="reset-email" className="text-sm font-medium">
           Email
         </label>
-        <input
+        <Input
           id="reset-email"
           type="email"
           placeholder="you@example.com"
@@ -62,7 +66,6 @@ export default function ForgotPasswordForm() {
           onChange={(e) => setEmail(e.target.value)}
           required
           autoComplete="email"
-          className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 

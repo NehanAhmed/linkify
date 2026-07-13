@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 
-const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:3000"
-
 export default function AuthCallback() {
+  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -29,12 +29,12 @@ export default function AuthCallback() {
 
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        window.location.href = APP_URL
+        navigate("/", { replace: true })
       }
     }
 
     handleCallback()
-  }, [])
+  }, [navigate])
 
   if (error) {
     return (
