@@ -3,7 +3,7 @@ import { env } from '../utils/env'
 import { logger } from '../utils/logger'
 
 let client: Redis | null = null
-let enabled = false
+let enabled = true
 
 function getClient(): Redis | null {
   if (client) return client

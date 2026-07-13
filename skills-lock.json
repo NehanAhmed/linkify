@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "maintaining-core-documentation": {
+      "source": "derailed-dash/dazbo-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/maintaining-core-documentation/SKILL.md",
+      "computedHash": "b7a7f2bc353ff3639ae458df5b645d023306edb3aa477d86e456dc2b77f35ee1"
+    }
+  }
+}

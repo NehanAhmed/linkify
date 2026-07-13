@@ -21,7 +21,7 @@ function ipv6ToBigInt(ip: string): bigint {
     for (const p of parts) {
       if (p === '') {
         if (!filled) {
-          for (let i = 0; i < missing; i++) expanded.push('0')
+          for (let i = 0; i < missing; i++) expanded.push('0000')
           filled = true
         }
       } else {

@@ -176,7 +176,7 @@ export async function purgeUrl(req: Request, res: Response, next: NextFunction) 
 
 export async function rootRedirect(req: Request, res: Response, next: NextFunction) {
   try {
-    const code = req.params[0]
+    const code = req.params.code! as string
     await performRedirect(code, req, res)
   } catch (err) {
     next(err)

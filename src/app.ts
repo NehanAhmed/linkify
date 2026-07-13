@@ -50,7 +50,7 @@ const redirectLimiter = rateLimit({
   message: { success: false, error: 'Too many requests, please try again later' },
 })
 
-app.get('/:code(\\w{3,16})', redirectLimiter, rootRedirect)
+app.get('/:code', redirectLimiter, rootRedirect)
 
 app.use(notFoundHandler)
 
