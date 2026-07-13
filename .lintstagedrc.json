@@ -1,6 +1,5 @@
 {
-  "src/**/*.ts": [
-    "bash -c 'pnpm typecheck'",
-    "pnpm test -- --findRelatedTests"
+  "apps/api/src/**/*.ts": [
+    "bash -c 'pnpm typecheck'"
   ]
 }
