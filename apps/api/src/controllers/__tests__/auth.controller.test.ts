@@ -26,10 +26,6 @@ vi.mock('../../db', () => ({
   },
 }))
 
-vi.mock('../../middleware/csrf', () => ({
-  generateCsrfToken: vi.fn(() => ({ token: 'test-token', signed: 'signed-token' })),
-}))
-
 vi.mock('../../utils/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }))
@@ -58,18 +54,6 @@ function mockRes(): Response {
 
 beforeEach(() => {
   vi.clearAllMocks()
-})
-
-describe('getCsrfToken', () => {
-  it('sets CSRF cookie and returns token', async () => {
-    const req = mockReq()
-    const res = mockRes()
-
-    await authController.getCsrfToken(req, res)
-
-    expect(res.cookie).toHaveBeenCalledWith('csrf-token', 'signed-token', expect.any(Object))
-    expect(res.json).toHaveBeenCalledWith({ success: true, data: { token: 'test-token' } })
-  })
 })
 
 describe('refreshToken', () => {

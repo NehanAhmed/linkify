@@ -6,6 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react"
+import { useNavigate } from "react-router-dom"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { fetchMe } from "@/lib/api"
@@ -24,16 +25,15 @@ interface AuthContextValue extends AuthState {
     needsEmailVerification: boolean
   }>
   signOut: () => Promise<void>
-  signInWithProvider: (provider: "google" | "github") => Promise<void>
+  signInWithProvider: (provider: "google" | "github") => Promise<{ error: string | null }>
   resetPassword: (email: string) => Promise<{ error: string | null }>
   updatePassword: (password: string) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:3000"
-
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
@@ -86,15 +86,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error, data } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
       if (error) return { error: error.message }
-      window.location.href = APP_URL
+
+      if (data.user && !data.user.email_confirmed_at) {
+        await supabase.auth.signOut()
+        return { error: "Please verify your email before signing in. Check your inbox." }
+      }
+
+      navigate("/")
       return { error: null }
     },
-    []
+    [navigate]
   )
 
   const signUp = useCallback(
@@ -113,12 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data.session === null
 
       if (!needsEmailVerification && data.session) {
-        window.location.href = APP_URL
+        navigate("/")
       }
 
       return { error: null, needsEmailVerification }
     },
-    []
+    [navigate]
   )
 
   const signOut = useCallback(async () => {
@@ -133,12 +139,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithProvider = useCallback(
     async (provider: "google" | "github") => {
-      await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      })
+      try {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider,
+          options: {
+            redirectTo: `${window.location.origin}/auth/callback`,
+          },
+        })
+        if (error) return { error: error.message }
+      } catch {
+        return { error: "An unexpected error occurred. Please try again." }
+      }
+      return { error: null }
     },
     []
   )
@@ -154,9 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = useCallback(async (password: string) => {
     const { error } = await supabase.auth.updateUser({ password })
     if (error) return { error: error.message }
-    window.location.href = APP_URL
+    navigate("/")
     return { error: null }
-  }, [])
+  }, [navigate])
 
   return (
     <AuthContext.Provider

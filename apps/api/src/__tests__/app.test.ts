@@ -7,7 +7,6 @@ vi.mock('../utils/env', () => ({
     NODE_ENV: 'test',
     SENTRY_DSN: undefined,
     REDIS_URL: undefined,
-    CSRF_SECRET: 'test-csrf-secret-32-characters!',
   },
 }))
 
@@ -25,10 +24,6 @@ vi.mock('../utils/logger', () => ({
 
 vi.mock('pino-http', () => ({
   default: vi.fn(() => (_req: any, _res: any, next: any) => next()),
-}))
-
-vi.mock('../middleware/csrf', () => ({
-  csrfProtection: vi.fn((_req: any, _res: any, next: any) => next()),
 }))
 
 vi.mock('../middleware/errorHandler', () => ({

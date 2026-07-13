@@ -1,3 +1,4 @@
+import { useState } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import type { AuthProvider } from "@linkify/shared"
 
@@ -8,6 +9,18 @@ const providers: { id: AuthProvider; label: string }[] = [
 
 export default function SocialButtons() {
   const { signInWithProvider } = useAuth()
+  const [loadingProvider, setLoadingProvider] = useState<AuthProvider | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleClick(provider: AuthProvider) {
+    setError(null)
+    setLoadingProvider(provider)
+    const { error: signInError } = await signInWithProvider(provider)
+    if (signInError) {
+      setError(signInError)
+      setLoadingProvider(null)
+    }
+  }
 
   return (
     <div className="flex flex-col gap-2">
@@ -15,10 +28,13 @@ export default function SocialButtons() {
         <button
           key={provider.id}
           type="button"
-          onClick={() => signInWithProvider(provider.id)}
-          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted active:translate-y-px"
+          disabled={loadingProvider !== null}
+          onClick={() => handleClick(provider.id)}
+          className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[10px] border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted active:translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {provider.id === "google" ? (
+          {loadingProvider === provider.id ? (
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
+          ) : provider.id === "google" ? (
             <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
@@ -48,6 +64,11 @@ export default function SocialButtons() {
           {provider.label}
         </button>
       ))}
+      {error && (
+        <div className="rounded-[10px] border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          {error}
+        </div>
+      )}
     </div>
   )
 }

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react"
+import { toast } from "sonner"
 import { useAuth } from "@/hooks/use-auth"
+import { Input } from "@/components/ui/input"
 
 export default function ResetPasswordForm() {
   const { updatePassword } = useAuth()
@@ -12,8 +14,8 @@ export default function ResetPasswordForm() {
     e.preventDefault()
     setError(null)
 
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters")
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters")
       return
     }
 
@@ -27,6 +29,7 @@ export default function ResetPasswordForm() {
     const { error: updateError } = await updatePassword(password)
     if (updateError) {
       setError(updateError)
+      toast.error(updateError)
       setIsLoading(false)
     }
   }
@@ -37,16 +40,15 @@ export default function ResetPasswordForm() {
         <label htmlFor="new-password" className="text-sm font-medium">
           New password
         </label>
-        <input
+        <Input
           id="new-password"
           type="password"
-          placeholder="At least 6 characters"
+          placeholder="At least 8 characters"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
-          minLength={6}
+          minLength={8}
           autoComplete="new-password"
-          className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 
@@ -54,7 +56,7 @@ export default function ResetPasswordForm() {
         <label htmlFor="confirm-new-password" className="text-sm font-medium">
           Confirm new password
         </label>
-        <input
+        <Input
           id="confirm-new-password"
           type="password"
           placeholder="Repeat your password"
@@ -62,7 +64,6 @@ export default function ResetPasswordForm() {
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           autoComplete="new-password"
-          className="flex h-10 w-full rounded-[10px] border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-3 focus:ring-ring/30 focus:border-ring disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 

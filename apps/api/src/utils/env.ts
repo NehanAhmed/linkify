@@ -9,7 +9,6 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   LINK_ACCESS_SECRET: z.string().min(1, 'LINK_ACCESS_SECRET is required'),
   ENCRYPTION_KEY: z.string().min(1, 'ENCRYPTION_KEY is required'),
-  CSRF_SECRET: z.string().min(1, 'CSRF_SECRET is required'),
   FINGERPRINT_SECRET: z.string().min(1, 'FINGERPRINT_SECRET is required'),
   PASSWORD_MAX_AGE_DAYS: z.coerce.number().int().min(0).default(0),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),

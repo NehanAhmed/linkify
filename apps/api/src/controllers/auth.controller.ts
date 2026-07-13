@@ -4,8 +4,6 @@ import { z } from 'zod'
 import { db } from '../db'
 import { users } from '../db/schema'
 import { eq } from 'drizzle-orm'
-import { generateCsrfToken } from '../middleware/csrf'
-
 const refreshSchema = z.object({
   refresh_token: z.string().min(1),
 })
@@ -27,17 +25,6 @@ const updateApiKeySchema = z.object({
   allowedIps: z.array(z.string()).optional(),
   expiresAt: z.string().datetime().nullable().optional(),
 })
-
-export async function getCsrfToken(_req: Request, res: Response) {
-  const { token, signed } = generateCsrfToken()
-  res.cookie('csrf-token', signed, {
-    httpOnly: true,
-    sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
-    path: '/',
-  })
-  res.json({ success: true, data: { token } })
-}
 
 export async function refreshToken(req: Request, res: Response, next: NextFunction) {
   try {

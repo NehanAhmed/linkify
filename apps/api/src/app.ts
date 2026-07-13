@@ -10,7 +10,6 @@ import stripeRoutes from './routes/stripe.routes'
 import routes from './routes'
 import { rootRedirect } from './controllers/url.controllers'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
-import { csrfProtection } from './middleware/csrf'
 import { logger } from './utils/logger'
 import { env } from './utils/env'
 
@@ -38,8 +37,6 @@ app.use(pinoHttp({ logger }))
 app.use('/api/stripe', stripeRoutes)
 app.use(express.json({ limit: '1mb' }))
 app.disable('x-powered-by')
-app.use('/api', csrfProtection)
-
 app.use(routes)
 
 const redirectLimiter = rateLimit({

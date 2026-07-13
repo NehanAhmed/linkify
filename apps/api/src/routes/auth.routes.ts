@@ -5,7 +5,6 @@ import { authLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.get('/csrf-token', authController.getCsrfToken)
 router.post('/refresh', authLimiter, authController.refreshToken)
 router.post('/reset-password', authLimiter, authController.resetPassword)
 router.get('/me', requireAuth, authController.getUserProfile)
