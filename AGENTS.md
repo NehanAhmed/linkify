@@ -13,7 +13,7 @@ linkify/
 ├── .lintstagedrc.json            ← pre-commit checks
 ├── apps/
 │   ├── api/                      ← Express 5 + TypeScript backend (@linkify/api)
-│   └── web/                      ← future frontend (@linkify/web)
+│   └── web/                      ← React 19 + Vite + Tailwind v4 + shadcn/ui frontend (@linkify/web)
 └── packages/
     └── shared/                   ← future shared types/utils (@linkify/shared)
 ```
@@ -404,6 +404,17 @@ When new packages are added, these commands automatically cover them (root scrip
 - name: Lint web
   run: pnpm --filter @linkify/web lint
 ```
+
+---
+
+## Design System
+
+Two authoritative source files for visual design:
+
+- **`PRODUCT.md`** — brand register, user segments, positioning, design principles (minimal, coherent, restrained, reliable, considered)
+- **`DESIGN.md`** — color tokens (oklch), typography (Geist Variable), elevation, component specs, do's/don'ts
+
+Changes to the visual identity must update both files in sync. The `.impeccable/design.json` sidecar is the machine-readable equivalent.
 
 ## Package manager
 

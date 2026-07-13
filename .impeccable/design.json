@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-13T00:00:00.000Z",
+  "title": "Design System: Linkify",
+  "extensions": {
+    "colorMeta": {
+      "background": { "role": "neutral", "displayName": "Paper", "canonical": "oklch(1 0 0)", "tonalRamp": ["oklch(0.95 0 0)", "oklch(0.96 0 0)", "oklch(0.97 0 0)", "oklch(0.98 0 0)", "oklch(0.99 0 0)", "oklch(1 0 0)", "oklch(1 0 0)", "oklch(1 0 0)"] },
+      "foreground": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(0.145 0 0)", "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.2 0 0)", "oklch(0.3 0 0)", "oklch(0.4 0 0)", "oklch(0.5 0 0)", "oklch(0.6 0 0)", "oklch(0.75 0 0)", "oklch(0.85 0 0)"] },
+      "primary": { "role": "primary", "displayName": "Ink", "canonical": "oklch(0.205 0 0)", "tonalRamp": ["oklch(0.145 0 0)", "oklch(0.205 0 0)", "oklch(0.3 0 0)", "oklch(0.4 0 0)", "oklch(0.5 0 0)", "oklch(0.6 0 0)", "oklch(0.75 0 0)", "oklch(0.85 0 0)"] },
+      "muted": { "role": "neutral", "displayName": "Mist", "canonical": "oklch(0.97 0 0)", "tonalRamp": ["oklch(0.94 0 0)", "oklch(0.95 0 0)", "oklch(0.96 0 0)", "oklch(0.97 0 0)", "oklch(0.98 0 0)", "oklch(0.985 0 0)", "oklch(0.99 0 0)", "oklch(1 0 0)"] },
+      "muted-foreground": { "role": "neutral", "displayName": "Ash", "canonical": "oklch(0.556 0 0)", "tonalRamp": ["oklch(0.3 0 0)", "oklch(0.4 0 0)", "oklch(0.5 0 0)", "oklch(0.556 0 0)", "oklch(0.6 0 0)", "oklch(0.65 0 0)", "oklch(0.7 0 0)", "oklch(0.8 0 0)"] },
+      "border": { "role": "neutral", "displayName": "Line", "canonical": "oklch(0.922 0 0)", "tonalRamp": ["oklch(0.85 0 0)", "oklch(0.88 0 0)", "oklch(0.9 0 0)", "oklch(0.922 0 0)", "oklch(0.94 0 0)", "oklch(0.95 0 0)", "oklch(0.96 0 0)", "oklch(0.97 0 0)"] },
+      "destructive": { "role": "accent", "displayName": "Signal Red", "canonical": "oklch(0.577 0.245 27.325)", "tonalRamp": ["oklch(0.3 0.245 27.325)", "oklch(0.4 0.245 27.325)", "oklch(0.5 0.245 27.325)", "oklch(0.577 0.245 27.325)", "oklch(0.65 0.2 27.325)", "oklch(0.75 0.15 27.325)", "oklch(0.85 0.1 27.325)", "oklch(0.95 0.05 27.325)"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero headlines only. Once per page." },
+      "headline": { "displayName": "Headline", "purpose": "Section headings and featured content." },
+      "title": { "displayName": "Title", "purpose": "Card titles, feature names, subheadings." },
+      "body": { "displayName": "Body", "purpose": "All running text. 65–75ch max-width." },
+      "label": { "displayName": "Label", "purpose": "Buttons, input labels, nav links, badges, metadata." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "0 1px 2px rgba(0,0,0,0.05)", "purpose": "Default card shadow at rest." },
+      { "name": "card-hover", "value": "0 4px 12px rgba(0,0,0,0.08)", "purpose": "Card shadow on hover, combined with translateY(-4px)." },
+      { "name": "modal-backdrop", "value": "0 0 0 9999px rgba(0,0,0,0.1)", "purpose": "Modal and sheet backdrop." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Default easing for reveals and entrances." },
+      { "name": "ease-standard", "value": "cubic-bezier(0.4, 0, 0.2, 1)", "purpose": "Default easing for state transitions (hover, focus)." },
+      { "name": "reveal-duration", "value": "600ms", "purpose": "Scroll-triggered fade-in-up duration." },
+      { "name": "hover-duration", "value": "300ms", "purpose": "Hover transitions (lift, shadow, color shift)." },
+      { "name": "stagger-interval", "value": "100ms", "purpose": "Delay between items in a staggered reveal sequence." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary call-to-action button. Used for the most important action on a page.",
+      "html": "<button class=\"ds-btn-primary\">Get Started</button>",
+      "css": ".ds-btn-primary { background: oklch(0.205 0 0); color: oklch(0.985 0 0); font-family: 'Geist Variable', sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1; padding: 0.5rem 1rem; border: none; border-radius: 10px; cursor: pointer; transition: background 0.3s, transform 0.3s; } .ds-btn-primary:hover { background: oklch(0.205 0 0 / 80%); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action button. Used alongside primary buttons for less prominent actions.",
+      "html": "<button class=\"ds-btn-outline\">Sign In</button>",
+      "css": ".ds-btn-outline { background: transparent; color: oklch(0.145 0 0); font-family: 'Geist Variable', sans-serif; font-size: 0.875rem; font-weight: 500; line-height: 1; padding: 0.5rem 1rem; border: 1px solid oklch(0.922 0 0); border-radius: 10px; cursor: pointer; transition: background 0.3s; } .ds-btn-outline:hover { background: oklch(0.97 0 0); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-text",
+      "description": "Single-line text input with icon slot. Used for URL entry and search.",
+      "html": "<div class=\"ds-input-wrap\"><svg class=\"ds-input-icon\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"oklch(0.556 0 0)\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\"/><path d=\"M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\"/></svg><input class=\"ds-input\" type=\"text\" placeholder=\"Enter your long URL\"></div>",
+      "css": ".ds-input-wrap { position: relative; display: flex; align-items: center; } .ds-input-icon { position: absolute; left: 0.75rem; pointer-events: none; } .ds-input { width: 100%; height: 44px; padding: 0 1rem 0 2.75rem; font-family: 'Geist Variable', sans-serif; font-size: 1rem; color: oklch(0.145 0 0); background: oklch(1 0 0); border: 1px solid oklch(0.922 0 0); border-radius: 10px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; } .ds-input::placeholder { color: oklch(0.556 0 0); } .ds-input:focus { border-color: transparent; box-shadow: 0 0 0 3px oklch(0.708 0 0); }"
+    },
+    {
+      "name": "Feature Card",
+      "kind": "card",
+      "refersTo": "card-feature",
+      "description": "Feature showcase card used in the landing page grid. Icon, title, description.",
+      "html": "<div class=\"ds-card-feature\"><div class=\"ds-card-icon\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"13 2 3 14 12 14 11 22 21 10 12 10 13 2\"/></svg></div><h3 class=\"ds-card-title\">Smart Short Links</h3><p class=\"ds-card-desc\">Auto-generated or custom short codes with password protection, expiry schedules, and link chaining.</p></div>",
+      "css": ".ds-card-feature { background: oklch(1 0 0 / 50%); backdrop-filter: blur(4px); border: 1px solid oklch(0.922 0 0); border-radius: 14px; padding: 1.5rem; transition: box-shadow 0.3s, transform 0.3s; } .ds-card-feature:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); transform: translateY(-4px); } .ds-card-icon { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: oklch(0.205 0 0 / 10%); border-radius: 8px; margin-bottom: 1rem; color: oklch(0.205 0 0); transition: background 0.3s, color 0.3s; } .ds-card-feature:hover .ds-card-icon { background: oklch(0.205 0 0); color: oklch(0.985 0 0); } .ds-card-title { font-family: 'Geist Variable', sans-serif; font-size: 1.125rem; font-weight: 600; color: oklch(0.145 0 0); margin: 0 0 0.5rem; } .ds-card-desc { font-family: 'Geist Variable', sans-serif; font-size: 0.875rem; color: oklch(0.556 0 0); line-height: 1.6; margin: 0; }"
+    },
+    {
+      "name": "Navbar (scrolled state)",
+      "kind": "nav",
+      "refersTo": "navbar-scrolled",
+      "description": "Fixed top navigation bar after scroll. Glass-mist background with bottom border.",
+      "html": "<nav class=\"ds-nav\"><div class=\"ds-nav-inner\"><div class=\"ds-nav-logo\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"oklch(0.985 0 0)\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"4\" fill=\"oklch(0.205 0 0)\"/><text x=\"12\" y=\"16\" text-anchor=\"middle\" font-family=\"sans-serif\" font-size=\"12\" font-weight=\"bold\" fill=\"oklch(0.985 0 0)\">L</text></svg><span class=\"ds-nav-brand\">Linkify</span></div><div class=\"ds-nav-links\"><a class=\"ds-nav-link\" href=\"#features\">Features</a><a class=\"ds-nav-link\" href=\"#pricing\">Pricing</a><a class=\"ds-nav-link\" href=\"#faq\">FAQ</a></div></div></nav>",
+      "css": ".ds-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 50; background: oklch(1 0 0 / 80%); backdrop-filter: blur(24px); border-bottom: 1px solid oklch(0.922 0 0); transition: background 0.3s; } .ds-nav-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; padding: 0 2rem; } .ds-nav-logo { display: flex; align-items: center; gap: 0.5rem; } .ds-nav-brand { font-family: 'Geist Variable', sans-serif; font-size: 1.125rem; font-weight: 600; color: oklch(0.145 0 0); } .ds-nav-links { display: flex; align-items: center; gap: 2rem; } .ds-nav-link { font-family: 'Geist Variable', sans-serif; font-size: 0.875rem; font-weight: 500; color: oklch(0.556 0 0); text-decoration: none; transition: color 0.2s; } .ds-nav-link:hover { color: oklch(0.145 0 0); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Link Vault",
+    "overview": "Every link deserves to be stored, tracked, and protected with the same care a vault gives its contents. The design communicates this through restraint: high-contrast ink on clean surfaces, deliberate whitespace, and hierarchy that guides the eye without decoration. Nothing is there by accident; nothing calls attention to itself unless it deserves it.\n\nThe system explicitly rejects the SaaS-cream default \u2014 tinted warm off-white backgrounds, glassmorphism decoration, gradient text, numbered section eyebrows, and the hero-metric template. It trusts typography, spacing, and contrast to do the work.",
+    "keyCharacteristics": [
+      "Monochrome-dominant with a single accent used sparingly (\u226410% of any screen)",
+      "High contrast: near-black ink on white surface, never gray-on-gray body text",
+      "Typography-driven hierarchy: weight and size carry the signal, not color",
+      "Surfaces are flat at rest; motion serves interaction, not decoration",
+      "Whitespace is structural, not ornamental"
+    ],
+    "rules": [
+      { "name": "The Single-Family Rule", "body": "Geist serves every role from hero to footnote. No font pairing, no second face.", "section": "typography" },
+      { "name": "The Flat-by-Default Rule", "body": "Every surface starts at elevation 0. Shadows are earned through interaction, not assigned by role.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use high-contrast body text (4.5:1 minimum). Near-black on white. Gray body text is the single fastest way to make the interface feel thin.",
+      "Do let typography carry hierarchy. Vary weight and size before reaching for color.",
+      "Do use whitespace as a structural device. Sections breathe; adjacent elements do not fight for attention.",
+      "Do use the accent color on \u226410% of any given screen. Its rarity signals importance.",
+      "Do animate with purpose \u2014 scroll-triggered reveals, hover feedback, focus rings. No decorative loops.",
+      "Do respect prefers-reduced-motion. All animations degrade to instant transitions."
+    ],
+    "donts": [
+      "Don't use warm-tinted off-white backgrounds. The AI-default cream/sand/beige aesthetic is explicitly rejected.",
+      "Don't use glassmorphism decoratively. Blur backgrounds are reserved for the navbar-on-scroll and modal overlays.",
+      "Don't use gradient text (background-clip: text with a gradient). Single solid colors only.",
+      "Don't put tiny uppercase tracked eyebrows above every section. One named kicker as deliberate voice is fine.",
+      "Don't use numbered section markers (01/02/03) as default scaffolding.",
+      "Don't use border-left greater than 1px as a colored accent stripe."
+    ]
+  }
+}

@@ -1,5 +1,8 @@
 {
   "apps/api/src/**/*.ts": [
     "bash -c 'pnpm typecheck'"
+  ],
+  "apps/web/src/**/*.{ts,tsx}": [
+    "bash -c 'pnpm --filter @linkify/web typecheck'"
   ]
 }

@@ -24,8 +24,14 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Run tests
+      - name: Type check web
+        run: pnpm --filter @linkify/web typecheck
+
+      - name: Run API tests
         run: pnpm test
 
-      - name: Build
+      - name: Build API
         run: pnpm build
+
+      - name: Build web
+        run: pnpm --filter @linkify/web build
