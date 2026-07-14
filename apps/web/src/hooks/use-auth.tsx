@@ -33,19 +33,37 @@ interface AuthContextValue extends AuthState {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-function getRedirectTo(): string | null {
-  const params = new URLSearchParams(window.location.search)
-  return params.get("redirectTo")
+const AUTH_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/auth/callback"])
+
+function sanitizeRedirectPath(redirectTo: string | null): string | null {
+  if (!redirectTo) return null
+  if (!redirectTo.startsWith("/")) return null
+  if (redirectTo.startsWith("//")) return null
+
+  const questionIndex = redirectTo.indexOf("?")
+  if (questionIndex !== -1) {
+    const searchParams = new URLSearchParams(redirectTo.slice(questionIndex))
+    if (searchParams.has("redirectTo")) {
+      redirectTo = redirectTo.slice(0, questionIndex)
+    }
+  }
+
+  if (AUTH_PATHS.has(redirectTo)) return null
+
+  return redirectTo
 }
 
-function relaySessionToDashboard() {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (!session) return
-    const { access_token, refresh_token } = session
-    const redirectTo = getRedirectTo() || "/overview"
-    const hash = `#access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}&redirectTo=${encodeURIComponent(redirectTo)}`
-    window.location.replace(`${DASHBOARD_URL}/auth/callback${hash}`)
-  })
+function getRedirectTo(): string | null {
+  return sanitizeRedirectPath(
+    new URLSearchParams(window.location.search).get("redirectTo"),
+  )
+}
+
+function relaySessionToDashboard(session: Session) {
+  const { access_token, refresh_token } = session
+  const redirectTo = getRedirectTo() || "/overview"
+  const hash = `#access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}&redirectTo=${encodeURIComponent(redirectTo)}`
+  window.location.replace(`${DASHBOARD_URL}/auth/callback${hash}`)
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -113,9 +131,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: "Please verify your email before signing in. Check your inbox." }
       }
 
-      const redirectTo = getRedirectTo()
-      if (redirectTo) {
-        relaySessionToDashboard()
+      if (data.session && getRedirectTo()) {
+        relaySessionToDashboard(data.session)
       } else {
         navigate("/")
       }
@@ -144,7 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!needsEmailVerification && data.session) {
         if (redirectTo) {
-          relaySessionToDashboard()
+          relaySessionToDashboard(data.session)
         } else {
           navigate("/")
         }

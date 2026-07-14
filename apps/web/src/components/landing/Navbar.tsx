@@ -4,9 +4,9 @@ import { Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
+import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/use-auth"
-
-const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:3000"
+import { DASHBOARD_URL } from "@/lib/config"
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -55,9 +55,14 @@ export default function Navbar() {
 
         <div className="flex items-center gap-2">
           {isLoading ? null : user ? (
-            <Button size="sm" render={<a href={APP_URL} />}>
-              Dashboard
-            </Button>
+            <>
+              <Button size="sm" render={<a href={DASHBOARD_URL} />}>
+                Dashboard
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
+                Sign Out
+              </Button>
+            </>
           ) : (
             <>
               <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link to="/login" />}>
@@ -87,9 +92,14 @@ export default function Navbar() {
               </nav>
               <div className="mt-6 flex flex-col gap-2">
                 {isLoading ? null : user ? (
-                  <Button className="w-full" render={<a href={APP_URL} />}>
-                    Dashboard
-                  </Button>
+                  <>
+                    <Button className="w-full" render={<a href={DASHBOARD_URL} />}>
+                      Dashboard
+                    </Button>
+                    <Button variant="outline" className="w-full" onClick={() => supabase.auth.signOut()}>
+                      Sign Out
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button variant="outline" className="w-full" render={<Link to="/login" />}>
