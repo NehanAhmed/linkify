@@ -473,6 +473,16 @@
       "template": "{file:.opencode/commands/projects.md}\n\n$ARGUMENTS"
     }
   },
+  "mcp": {
+    "21st": {
+      "type":"remote",
+      "url": "https://21st.dev/api/mcp",
+      "enabled":true,
+      "headers": {
+        "x-api-key": "21st_sk_e97f6ad7dba85817321fea2aeb876ba733738c50511181f8610ba07026a4c697"
+      }
+    }
+  },
   "permission": {
     "mcp_*": "ask"
   }

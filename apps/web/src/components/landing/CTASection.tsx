@@ -13,9 +13,7 @@ export default function CTASection() {
         className={`mx-auto max-w-3xl px-4 text-center sm:px-6 lg:px-8 ${isVisible ? "animate-fade-in-up" : "opacity-0"}`}
       >
         <h2 className="text-headline">
-          Start shortening your
-          <br />
-          <span className="text-primary">links today</span>
+          Start shortening your links today
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
           Join thousands of teams who trust Linkify. Free to start, no credit card required.

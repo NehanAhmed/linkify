@@ -64,9 +64,7 @@ export default function PricingPreview() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-headline">
-            Simple, transparent
-            <br />
-            <span className="text-primary">pricing</span>
+            Simple, transparent pricing
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             Start free, upgrade when you grow. No hidden fees, no surprises.
@@ -81,7 +79,7 @@ export default function PricingPreview() {
             <Card
               key={tier.name}
               className={cn(
-                "relative flex flex-col border bg-card/50 backdrop-blur-sm",
+                "relative flex flex-col border bg-card",
                 tier.popular && "border-primary shadow-lg scale-105",
               )}
             >

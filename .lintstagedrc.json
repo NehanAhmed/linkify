@@ -4,5 +4,8 @@
   ],
   "apps/web/src/**/*.{ts,tsx}": [
     "bash -c 'pnpm --filter @linkify/web typecheck'"
+  ],
+  "apps/dashboard/src/**/*.{ts,tsx}": [
+    "bash -c 'pnpm --filter @linkify/dashboard typecheck'"
   ]
 }

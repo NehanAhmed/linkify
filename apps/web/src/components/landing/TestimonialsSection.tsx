@@ -45,9 +45,7 @@ export default function TestimonialsSection() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-headline">
-            Loved by teams
-            <br />
-            <span className="text-primary">worldwide</span>
+            Loved by teams worldwide
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             See why thousands of companies trust Linkify for their link management.
@@ -59,7 +57,7 @@ export default function TestimonialsSection() {
           className={`mt-14 grid gap-6 md:grid-cols-3 animate-stagger ${isVisible ? "visible" : ""}`}
         >
           {testimonials.map((t) => (
-            <Card key={t.name} className="flex flex-col border bg-background/50 backdrop-blur-sm shadow-sm">
+            <Card key={t.name} className="flex flex-col border bg-card shadow-sm">
               <CardContent className="flex flex-col gap-4 p-6">
                 <div className="flex items-center justify-between">
                   <Avatar className="h-10 w-10">
