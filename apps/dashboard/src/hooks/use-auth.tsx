@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { fetchMe } from "@/lib/api"
@@ -26,8 +26,11 @@ const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:5173"
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
+const PUBLIC_PATHS = ["/auth/callback"]
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const [state, setState] = useState<AuthState>({
     user: null,
     session: null,
@@ -45,9 +48,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const redirectToLogin = useCallback(() => {
-    const currentPath = window.location.pathname + window.location.search
-    window.location.href = `${APP_URL}/login?redirectTo=${encodeURIComponent(currentPath)}`
-  }, [])
+    const currentPath = location.pathname + location.search
+    window.location.replace(`${APP_URL}/login?redirectTo=${encodeURIComponent(currentPath)}`)
+  }, [location.pathname, location.search])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -82,6 +85,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe()
     }
   }, [fetchProfile])
+
+  useEffect(() => {
+    if (state.isLoading) return
+    if (state.session) return
+    if (PUBLIC_PATHS.includes(location.pathname)) return
+
+    redirectToLogin()
+  }, [state.isLoading, state.session, location.pathname, redirectToLogin])
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()

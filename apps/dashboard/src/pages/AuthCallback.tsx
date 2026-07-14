@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
-import { DASHBOARD_URL } from "@/lib/config"
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -9,37 +8,35 @@ export default function AuthCallback() {
 
   useEffect(() => {
     async function handleCallback() {
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get("code")
-      const errorParam = params.get("error")
-      const errorDescription = params.get("error_description")
-      const redirectTo = params.get("redirectTo")
-
-      if (errorParam) {
-        setError(errorDescription ?? "Authentication failed")
+      const hash = window.location.hash.slice(1)
+      if (!hash) {
+        setError("No authentication data received")
         return
       }
 
-      if (code) {
-        const { error: exchangeError } =
-          await supabase.auth.exchangeCodeForSession(code)
-        if (exchangeError) {
-          setError(exchangeError.message)
-          return
-        }
+      const params = new URLSearchParams(hash)
+      const accessToken = params.get("access_token")
+      const refreshToken = params.get("refresh_token")
+      const redirectTo = params.get("redirectTo") || "/overview"
+
+      if (!accessToken || !refreshToken) {
+        setError("Invalid authentication data")
+        return
       }
 
-      const { data: { session } } = await supabase.auth.getSession()
+      window.location.hash = ""
 
-      if (session) {
-        if (redirectTo) {
-          const { access_token, refresh_token } = session
-          const hash = `#access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}&redirectTo=${encodeURIComponent(redirectTo)}`
-          window.location.replace(`${DASHBOARD_URL}/auth/callback${hash}`)
-        } else {
-          navigate("/", { replace: true })
-        }
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+
+      if (setSessionError) {
+        setError(setSessionError.message)
+        return
       }
+
+      navigate(redirectTo, { replace: true })
     }
 
     handleCallback()
@@ -65,7 +62,7 @@ export default function AuthCallback() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6">
       <span className="h-6 w-6 animate-spin rounded-full border-2 border-foreground border-t-transparent" />
       <p className="text-sm text-muted-foreground">
-        Completing authentication...
+        Signing you in...
       </p>
     </div>
   )

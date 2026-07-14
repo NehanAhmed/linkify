@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { fetchMe } from "@/lib/api"
+import { DASHBOARD_URL } from "@/lib/config"
 
 interface AuthState {
   user: User | null
@@ -31,6 +32,21 @@ interface AuthContextValue extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+function getRedirectTo(): string | null {
+  const params = new URLSearchParams(window.location.search)
+  return params.get("redirectTo")
+}
+
+function relaySessionToDashboard() {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (!session) return
+    const { access_token, refresh_token } = session
+    const redirectTo = getRedirectTo() || "/overview"
+    const hash = `#access_token=${encodeURIComponent(access_token)}&refresh_token=${encodeURIComponent(refresh_token)}&redirectTo=${encodeURIComponent(redirectTo)}`
+    window.location.replace(`${DASHBOARD_URL}/auth/callback${hash}`)
+  })
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -97,7 +113,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: "Please verify your email before signing in. Check your inbox." }
       }
 
-      navigate("/")
+      const redirectTo = getRedirectTo()
+      if (redirectTo) {
+        relaySessionToDashboard()
+      } else {
+        navigate("/")
+      }
       return { error: null }
     },
     [navigate]
@@ -105,11 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(
     async (email: string, password: string) => {
+      const redirectTo = getRedirectTo()
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: redirectTo
+            ? `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
+            : `${window.location.origin}/auth/callback`,
         },
       })
       if (error) return { error: error.message, needsEmailVerification: false }
@@ -119,7 +143,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data.session === null
 
       if (!needsEmailVerification && data.session) {
-        navigate("/")
+        if (redirectTo) {
+          relaySessionToDashboard()
+        } else {
+          navigate("/")
+        }
       }
 
       return { error: null, needsEmailVerification }
@@ -140,11 +168,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithProvider = useCallback(
     async (provider: "google" | "github") => {
       try {
+        const redirectTo = getRedirectTo()
+        const callbackUrl = redirectTo
+          ? `${window.location.origin}/auth/callback?redirectTo=${encodeURIComponent(redirectTo)}`
+          : `${window.location.origin}/auth/callback`
+
         const { error } = await supabase.auth.signInWithOAuth({
           provider,
-          options: {
-            redirectTo: `${window.location.origin}/auth/callback`,
-          },
+          options: { redirectTo: callbackUrl },
         })
         if (error) return { error: error.message }
       } catch {
