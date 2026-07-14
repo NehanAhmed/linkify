@@ -17,6 +17,11 @@
     "web:preview": "pnpm --filter @linkify/web preview",
     "web:typecheck": "pnpm --filter @linkify/web typecheck",
     "web:test": "pnpm --filter @linkify/web test",
+    "dashboard:dev": "pnpm --filter @linkify/dashboard dev",
+    "dashboard:build": "pnpm --filter @linkify/dashboard build",
+    "dashboard:preview": "pnpm --filter @linkify/dashboard preview",
+    "dashboard:typecheck": "pnpm --filter @linkify/dashboard typecheck",
+    "dashboard:test": "pnpm --filter @linkify/dashboard test",
     "prepare": "husky"
   },
   "packageManager": "pnpm@10.33.2",

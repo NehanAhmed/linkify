@@ -18,7 +18,7 @@ Linkify is an enterprise-grade URL shortener and link management platform. It ex
 
 ## Positioning
 
-Enterprise-grade link management with security built into every layer — SSRF protection, password protection, audit logging, and AAL2-compliant 2FA — without sacrificing the ease of use that makes a link shortener useful in the first place.
+Link management that doesn't hedge. Enterprise-grade security with the polish of a consumer product — SSRF protection, password protection, audit logging, and AAL2-compliant 2FA, all delivered through an interface that respects your time and attention.
 
 ## Conversion & proof
 
@@ -30,20 +30,24 @@ Enterprise-grade link management with security built into every layer — SSRF p
 
 ## Brand Personality
 
-Clean, minimal, reliable. The tone is direct and confident without being aggressive — like a tool that does its job quietly and well. Inspired by Supabase and Clerk: bold when it needs attention, restrained when it doesn't.
+Sharp and direct. Linkify communicates like a tool that respects your time — no filler, no fluff, no decorative nonsense. The voice is confident without being loud, opinionated without being arrogant. Every line earns its place.
+
+Inspired by Arc and Superhuman: bold when it needs attention, precise when it doesn't. The interface should feel like a well-machined tool — every surface intentional, every interaction considered.
 
 ## Anti-references
 
-Avoid the generic SaaS-cream aesthetic (warm-tinted off-white backgrounds, glassmorphism decoration, gradient text, numbered section eyebrows, hero-metric templates). Every design choice should feel intentional, not templated.
+Avoid the generic SaaS-cream aesthetic (warm-tinted off-white backgrounds, glassmorphism decoration, gradient text, numbered section eyebrows, hero-metric templates). No editorial-typographic affectation (italic serif drop caps, ruled columns, broadsheet grid). No interminable beige. No rounded icons above every card heading. Every design choice should feel intentional, not templated.
 
 ## Design Principles
 
-1. **Show, don't tell.** Let visitors shorten a real URL before they sign up. The product should demonstrate its value in seconds.
-2. **Trust through restraint.** Clean layouts, clear hierarchy, no decorative clutter. Security is communicated through simplicity, not badges.
-3. **One job per section.** Every section on the landing page has exactly one message and one action. Don't overload.
-4. **Bold when it counts.** Use colour and weight to draw attention to the primary action. Everything else recedes.
-5. **Ship fast, stay solid.** The landing page loads in under 2 seconds, works without JavaScript for basic content, and respects reduced motion preferences.
+1. **Bold by default.** Every element earns its place. If it doesn't stand out, it doesn't belong. Use colour, weight, and scale with conviction. Timid is worse than wrong.
+
+2. **High craft, low friction.** Premium feel without getting in the way. Details matter — the micro-motion on a button, the spacing between sections, the weight of a border — but they never slow the user down.
+
+3. **Trust through polish.** Precision communicates reliability. Every pixel aligned, every transition intentional. A visitor should feel the care before they read a single word.
+
+4. **Opinionated, not neutral.** Make clear choices. No hedging. From the colour palette to the type pair, every decision commits. A visitor should feel the intention.
 
 ## Accessibility & Inclusion
 
-Standard web accessibility: semantic HTML, keyboard-navigable, sufficient colour contrast for body text, focus indicators visible, prefers-reduced-motion respected. No formal WCAG level target.
+Standard web accessibility: semantic HTML, keyboard-navigable, sufficient colour contrast for body text (≥4.5:1), focus indicators visible, prefers-reduced-motion respected. No formal WCAG level target.

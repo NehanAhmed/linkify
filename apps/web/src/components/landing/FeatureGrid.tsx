@@ -43,9 +43,9 @@ export default function FeatureGrid() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-headline">
-            Everything you need to
+            Everything you need to manage
             <br />
-            <span className="text-primary">manage your links</span>
+            your links
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-muted-foreground">
             From creation to analytics, Linkify handles the complete link lifecycle so you can focus on what matters.
@@ -54,10 +54,10 @@ export default function FeatureGrid() {
 
         <div
           ref={ref}
-          className={`mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 animate-stagger ${isVisible ? "visible" : ""}`}
+          className={`mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-3 animate-stagger ${isVisible ? "visible" : ""}`}
         >
           {features.map((feature) => (
-            <Card key={feature.title} className="group bg-card/50 backdrop-blur-sm border shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
+            <Card key={feature.title} className="group border bg-card shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300">
               <CardContent className="p-6">
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
                   <feature.icon className="h-5 w-5" />

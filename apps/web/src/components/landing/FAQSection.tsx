@@ -41,9 +41,7 @@ export default function FAQSection() {
       <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           <h2 className="text-headline">
-            Frequently asked
-            <br />
-            <span className="text-primary">questions</span>
+            Frequently asked questions
           </h2>
         </div>
 

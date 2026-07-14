@@ -33,31 +33,34 @@ export default function Navbar() {
           : "bg-transparent",
       )}
     >
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground text-xs font-bold">
             L
           </div>
-          <span className="text-lg font-semibold">Linkify</span>
+          <span className="text-sm font-semibold tracking-tight">Linkify</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center gap-1">
           {navLinks.map((link) => (
             <a
               key={link.href}
               href={link.href}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             >
               {link.label}
             </a>
           ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
           {isLoading ? null : user ? (
             <Button size="sm" render={<a href={APP_URL} />}>
               Dashboard
             </Button>
           ) : (
             <>
-              <Button variant="outline" size="sm" render={<Link to="/login" />}>
+              <Button variant="ghost" size="sm" className="hidden sm:inline-flex" render={<Link to="/login" />}>
                 Sign In
               </Button>
               <Button size="sm" render={<Link to="/signup" />}>
@@ -65,42 +68,42 @@ export default function Navbar() {
               </Button>
             </>
           )}
-        </nav>
 
-        <Sheet>
-          <SheetTrigger className="md:hidden" render={<Button variant="ghost" size="icon" />}>
-            <Menu className="h-5 w-5" />
-          </SheetTrigger>
-          <SheetContent side="right">
-            <nav className="mt-8 flex flex-col gap-4">
-              {navLinks.map((link) => (
-                <a
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {link.label}
-                </a>
-              ))}
-              <div className="mt-4 flex flex-col gap-2">
+          <Sheet>
+            <SheetTrigger className="md:hidden" render={<Button variant="outline" size="icon" />}>
+              <Menu className="h-4 w-4" />
+            </SheetTrigger>
+            <SheetContent side="right" className="w-72">
+              <nav className="mt-8 flex flex-col gap-1">
+                {navLinks.map((link) => (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    className="rounded-md px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </nav>
+              <div className="mt-6 flex flex-col gap-2">
                 {isLoading ? null : user ? (
-                  <Button render={<a href={APP_URL} />}>
+                  <Button className="w-full" render={<a href={APP_URL} />}>
                     Dashboard
                   </Button>
                 ) : (
                   <>
-                    <Button variant="outline" render={<Link to="/login" />}>
+                    <Button variant="outline" className="w-full" render={<Link to="/login" />}>
                       Sign In
                     </Button>
-                    <Button render={<Link to="/signup" />}>
+                    <Button className="w-full" render={<Link to="/signup" />}>
                       Get Started
                     </Button>
                   </>
                 )}
               </div>
-            </nav>
-          </SheetContent>
-        </Sheet>
+            </SheetContent>
+          </Sheet>
+        </div>
       </div>
     </header>
   )
