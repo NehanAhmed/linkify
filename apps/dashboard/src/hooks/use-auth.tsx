@@ -6,7 +6,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useLocation } from "react-router-dom"
 import type { Session, User } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { fetchMe } from "@/lib/api"
@@ -23,13 +23,17 @@ interface AuthContextValue extends AuthState {
 }
 
 const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:5173"
+const WEB_LOGIN_URL = APP_URL && !APP_URL.startsWith(window.location.origin)
+  ? APP_URL
+  : "http://localhost:5173"
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 
-const PUBLIC_PATHS = ["/auth/callback"]
+function isPublicPath(pathname: string): boolean {
+  return pathname === "/auth/callback" || pathname.startsWith("/auth/callback/")
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const navigate = useNavigate()
   const location = useLocation()
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -48,8 +52,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const redirectToLogin = useCallback(() => {
-    const currentPath = location.pathname + location.search
-    window.location.replace(`${APP_URL}/login?redirectTo=${encodeURIComponent(currentPath)}`)
+    const params = new URLSearchParams(location.search)
+    params.delete("redirectTo")
+    const cleanSearch = params.toString()
+    const currentPath = location.pathname + (cleanSearch ? `?${cleanSearch}` : "")
+    window.location.replace(`${WEB_LOGIN_URL}/login?redirectTo=${encodeURIComponent(currentPath)}`)
   }, [location.pathname, location.search])
 
   useEffect(() => {
@@ -89,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (state.isLoading) return
     if (state.session) return
-    if (PUBLIC_PATHS.includes(location.pathname)) return
+    if (isPublicPath(location.pathname)) return
 
     redirectToLogin()
   }, [state.isLoading, state.session, location.pathname, redirectToLogin])

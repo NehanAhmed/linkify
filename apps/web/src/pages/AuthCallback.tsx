@@ -3,6 +3,26 @@ import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 import { DASHBOARD_URL } from "@/lib/config"
 
+const AUTH_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/auth/callback"])
+
+function sanitizeRedirectPath(redirectTo: string | null): string | null {
+  if (!redirectTo) return null
+  if (!redirectTo.startsWith("/")) return null
+  if (redirectTo.startsWith("//")) return null
+
+  const questionIndex = redirectTo.indexOf("?")
+  if (questionIndex !== -1) {
+    const searchParams = new URLSearchParams(redirectTo.slice(questionIndex))
+    if (searchParams.has("redirectTo")) {
+      redirectTo = redirectTo.slice(0, questionIndex)
+    }
+  }
+
+  if (AUTH_PATHS.has(redirectTo)) return null
+
+  return redirectTo
+}
+
 export default function AuthCallback() {
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
@@ -13,7 +33,7 @@ export default function AuthCallback() {
       const code = params.get("code")
       const errorParam = params.get("error")
       const errorDescription = params.get("error_description")
-      const redirectTo = params.get("redirectTo")
+      const redirectTo = sanitizeRedirectPath(params.get("redirectTo"))
 
       if (errorParam) {
         setError(errorDescription ?? "Authentication failed")

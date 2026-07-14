@@ -1,9 +1,33 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { supabase } from "@/lib/supabase"
 
+const APP_URL = import.meta.env.VITE_APP_URL ?? "http://localhost:5173"
+const WEB_LOGIN_URL = APP_URL && !APP_URL.startsWith(window.location.origin)
+  ? APP_URL
+  : "http://localhost:5173"
+const DEFAULT_REDIRECT = "/overview"
+
+const AUTH_PATHS = new Set(["/login", "/signup", "/forgot-password", "/reset-password", "/auth/callback"])
+
+function sanitizeRedirectPath(hashRedirect: string | null): string {
+  if (!hashRedirect) return DEFAULT_REDIRECT
+  if (!hashRedirect.startsWith("/")) return DEFAULT_REDIRECT
+  if (hashRedirect.startsWith("//")) return DEFAULT_REDIRECT
+
+  const questionIndex = hashRedirect.indexOf("?")
+  if (questionIndex !== -1) {
+    const searchParams = new URLSearchParams(hashRedirect.slice(questionIndex))
+    if (searchParams.has("redirectTo")) {
+      hashRedirect = hashRedirect.slice(0, questionIndex)
+    }
+  }
+
+  if (AUTH_PATHS.has(hashRedirect)) return DEFAULT_REDIRECT
+
+  return hashRedirect
+}
+
 export default function AuthCallback() {
-  const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -17,14 +41,14 @@ export default function AuthCallback() {
       const params = new URLSearchParams(hash)
       const accessToken = params.get("access_token")
       const refreshToken = params.get("refresh_token")
-      const redirectTo = params.get("redirectTo") || "/overview"
+      const redirectTo = sanitizeRedirectPath(params.get("redirectTo"))
 
       if (!accessToken || !refreshToken) {
         setError("Invalid authentication data")
         return
       }
 
-      window.location.hash = ""
+      history.replaceState(null, "", window.location.pathname)
 
       const { error: setSessionError } = await supabase.auth.setSession({
         access_token: accessToken,
@@ -36,11 +60,11 @@ export default function AuthCallback() {
         return
       }
 
-      navigate(redirectTo, { replace: true })
+      window.location.replace(redirectTo)
     }
 
     handleCallback()
-  }, [navigate])
+  }, [])
 
   if (error) {
     return (
@@ -49,7 +73,7 @@ export default function AuthCallback() {
           {error}
         </div>
         <a
-          href="/login"
+          href={`${WEB_LOGIN_URL}/login`}
           className="text-sm font-medium text-foreground hover:underline"
         >
           Back to sign in
