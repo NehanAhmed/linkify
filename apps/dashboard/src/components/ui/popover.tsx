@@ -1,5 +1,18 @@
 import { cn } from "@/lib/utils"
-import { useState, useRef, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from "react"
+
+interface PopoverContextValue {
+  open: boolean
+  setOpen: (open: boolean) => void
+}
+
+const PopoverContext = createContext<PopoverContextValue | undefined>(undefined)
+
+function usePopover() {
+  const ctx = useContext(PopoverContext)
+  if (!ctx) throw new Error("Popover components must be used within Popover")
+  return ctx
+}
 
 interface PopoverProps {
   children: ReactNode
@@ -26,17 +39,21 @@ export function Popover({ children, open: controlledOpen, onOpenChange }: Popove
     }
   }, [open, setOpen])
 
-  return <div ref={ref} className="relative">{children}</div>
+  return (
+    <PopoverContext.Provider value={{ open, setOpen }}>
+      <div ref={ref} className="relative">{children}</div>
+    </PopoverContext.Provider>
+  )
 }
 
 interface PopoverTriggerProps {
   children: ReactNode
   asChild?: boolean
-  onClick?: () => void
 }
 
-export function PopoverTrigger({ children, onClick }: PopoverTriggerProps) {
-  return <div onClick={onClick}>{children}</div>
+export function PopoverTrigger({ children }: PopoverTriggerProps) {
+  const { open, setOpen } = usePopover()
+  return <div onClick={() => setOpen(!open)}>{children}</div>
 }
 
 interface PopoverContentProps {
@@ -46,6 +63,8 @@ interface PopoverContentProps {
 }
 
 export function PopoverContent({ children, className, align = "start" }: PopoverContentProps) {
+  const { open } = usePopover()
+  if (!open) return null
   return (
     <div
       className={cn(

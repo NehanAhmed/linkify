@@ -4,7 +4,7 @@ import { forwardRef, type SelectHTMLAttributes } from "react"
 export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {}
 
 const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, children, ...props }, ref) => {
+  ({ className, children, style, ...props }, ref) => {
     return (
       <select
         ref={ref}
@@ -16,6 +16,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23808080' strokeWidth='2' strokeLinecap='round' strokeLinejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
           backgroundPosition: "right 10px center",
           paddingRight: "32px",
+          ...style,
         }}
         {...props}
       >

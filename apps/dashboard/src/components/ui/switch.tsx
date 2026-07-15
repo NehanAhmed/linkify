@@ -1,15 +1,18 @@
 import { cn } from "@/lib/utils"
-import { forwardRef, type InputHTMLAttributes, useRef } from "react"
+import { forwardRef, useState, type InputHTMLAttributes } from "react"
 
 export interface SwitchProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "type"> {
   onCheckedChange?: (checked: boolean) => void
 }
 
 const Switch = forwardRef<HTMLInputElement, SwitchProps>(
-  ({ className, checked, onChange, onCheckedChange, disabled, ...props }, ref) => {
-    const inputRef = useRef<HTMLInputElement>(null)
+  ({ className, checked: controlledChecked, defaultChecked, onChange, onCheckedChange, disabled, ...props }, ref) => {
+    const [internalChecked, setInternalChecked] = useState(defaultChecked ?? controlledChecked ?? false)
+    const isControlled = controlledChecked !== undefined
+    const checked = isControlled ? controlledChecked : internalChecked
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!isControlled) setInternalChecked(e.target.checked)
       onChange?.(e)
       onCheckedChange?.(e.target.checked)
     }
@@ -24,7 +27,7 @@ const Switch = forwardRef<HTMLInputElement, SwitchProps>(
         )}
       >
         <input
-          ref={ref || inputRef}
+          ref={ref}
           type="checkbox"
           checked={checked}
           onChange={handleChange}

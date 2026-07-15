@@ -58,6 +58,10 @@ Linkify handles the complete lifecycle of a short link — from creation with cu
 - **PNG & SVG Formats** — Download QR codes in either format
 - **Logo Embedding** — Optionally embed a logo image in the centre of the QR code
 - **Auto-Fetch** — Fetches logo from URL, resizes, and composites
+- **Short URL Encoding** — QR encodes the short URL (not destination), so scans are tracked and respect expiry/password protection
+- **Database Caching** — QR images are cached in the `qr_codes` table; subsequent requests skip re-generation
+- **Time-Limited QR** — Independent `qrExpiresAt` field allows QR expiry separate from link expiry
+- **QR Regeneration** — Expired QR codes can be regenerated with a new expiry date; old cache is purged
 
 ### Bulk Operations
 - **Bulk Tag** — Assign tags to multiple URLs at once

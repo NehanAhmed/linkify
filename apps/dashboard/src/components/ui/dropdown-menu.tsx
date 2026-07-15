@@ -5,6 +5,8 @@ import {
   useState,
   useRef,
   useEffect,
+  cloneElement,
+  isValidElement,
   type ReactNode,
 } from "react"
 
@@ -32,11 +34,14 @@ export function DropdownMenu({ children }: { children: ReactNode }) {
 
 export function DropdownMenuTrigger({ children, asChild }: { children: ReactNode; asChild?: boolean }) {
   const { open, setOpen } = useDropdown()
+  if (asChild && isValidElement(children)) {
+    return cloneElement(children, { onClick: () => setOpen(!open) } as Partial<unknown>)
+  }
   return (
     <button
       type="button"
       onClick={() => setOpen(!open)}
-      className={asChild ? "" : "inline-flex items-center"}
+      className="inline-flex items-center"
     >
       {children}
     </button>

@@ -54,7 +54,7 @@ After auth in `apps/web`, the user is redirected to `apps/dashboard` (port 5174)
 #### Shared types (`packages/shared/src/index.ts`)
 Add TypeScript interfaces/types for all API response shapes:
 
-- `ShortUrl` — `{ code, url, shortUrl, title, description, image, visits, uniqueVisits, expiresAt, activeAt, hasPassword, blockBots, createdAt }`
+- `ShortUrl` — `{ code, url, shortUrl, title, description, image, visits, uniqueVisits, expiresAt, activeAt, hasPassword, blockBots, qrExpiresAt, createdAt }`
 - `Visit` — `{ id, code, ipAddress, userAgent, referer, country, city, deviceType, os, browser, browserVersion, referrerCategory, isBot, visitedAt }`
 - `VisitStats` — `{ totalVisits, uniqueVisits, hourly: VisitStat[], daily: VisitStat[] }`
 - `VisitStat` — `{ hour/date, visits, uniqueVisits }`
@@ -76,7 +76,7 @@ Add TypeScript interfaces/types for all API response shapes:
 - Export typed helper functions for every endpoint (one per API call):
   - Auth: `fetchMe`, `refreshToken`, `resetPassword`
   - API Keys: `createApiKey`, `listApiKeys`, `updateApiKey`, `revokeApiKey`
-  - URLs: `createUrl`, `bulkCreateUrls`, `listUrls`, `getUrlInfo`, `getUrlVisits`, `getUrlStats`, `exportVisitsCsv`, `generateQrCode`, `updateUrlSettings`, `setUrlPassword`, `removeUrlPassword`, `verifyUrlPassword`, `softDeleteUrl`, `purgeUrl`, `bulkOperations`, `importCsv`
+  - URLs: `createUrl`, `bulkCreateUrls`, `listUrls`, `getUrlInfo`, `getUrlVisits`, `getUrlStats`, `exportVisitsCsv`, `generateQrCode`, `regenerateQrCode`, `updateUrlSettings`, `setUrlPassword`, `removeUrlPassword`, `verifyUrlPassword`, `softDeleteUrl`, `purgeUrl`, `bulkOperations`, `importCsv`
   - Collections: `listCollections`, `createCollection`, `getCollection`, `updateCollection`, `deleteCollection`, `reorderCollections`, `shareCollection`, `revokeCollectionShare`, `getCollectionUrls`, `addUrlToCollection`, `removeUrlFromCollection`
   - Tags: `listTags`, `createTag`, `updateTag`, `deleteTag`, `bulkTagUrls`, `getTagUrls`
   - Billing: `listPlans`, `createCheckoutSession`, `getPortalUrl`, `getSubscription`, `cancelSubscription`, `getUsage`
@@ -240,6 +240,7 @@ Each page component is a placeholder `<PageHeader title="..." />` — actual con
   - **TTL Days** (optional) — number input or preset buttons (7d, 30d, 90d, 365d, never)
   - **Password** (optional) — password input, only shown if plan allows
   - **Active at** (optional) — date-time picker (scheduled activation)
+  - **QR expires at** (optional) — date-time picker (QR code expiry, independent of link TTL)
   - **Block bots** — toggle switch
   - **Tags** — multi-select of existing tags, with create-new-tag inline option
   - **Collection** — dropdown to select a collection
@@ -303,11 +304,17 @@ Each page component is a placeholder `<PageHeader title="..." />` — actual con
 - Loading state while file generates
 
 #### QR code
+- QR encodes the **short URL** (not destination) → scans go through the redirect: tracked, time-limited, password-checked
 - Button/modal "Generate QR Code"
 - Format selector: PNG / SVG
 - Optional logo URL input
 - Preview of the QR code in the modal
 - Download button for PNG or SVG
+- Expiry badge: shows `qrExpiresAt` if set; "Expired" state when past
+- **"Regenerate QR"** — visible when QR is expired
+  - Confirmation dialog → calls `POST /:code/qr/regenerate` with new `expiresAt`
+  - Replaces the stored QR (old cache is purged, new QR generated)
+- QR is cached in DB on first generation; subsequent loads return cached version
 - Loading state while QR generates
 
 #### Page sections navigation
@@ -326,6 +333,7 @@ Each page component is a placeholder `<PageHeader title="..." />` — actual con
 - Edit form using `PATCH /api/urls/:code/settings`:
   - **Active at** — date-time picker (null = no schedule)
   - **Expires at** — date-time picker (null = never expires)
+  - **QR expires at** — date-time picker (null = never expires; independent of link expiry)
   - **Block bots** — toggle switch
   - "Clear" buttons next to date fields to set null
 - Save button with loading state and success toast

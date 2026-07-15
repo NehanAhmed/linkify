@@ -21,12 +21,18 @@ export default function CopyButton({ text, className, variant = "outline", size 
     } catch {
       const input = document.createElement("input")
       input.value = text
+      input.style.position = "fixed"
+      input.style.opacity = "0"
       document.body.appendChild(input)
-      input.select()
-      document.execCommand("copy")
-      document.body.removeChild(input)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
+      try {
+        input.select()
+        if (document.execCommand("copy")) {
+          setCopied(true)
+          setTimeout(() => setCopied(false), 1500)
+        }
+      } finally {
+        document.body.removeChild(input)
+      }
     }
   }, [text])
 

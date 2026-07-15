@@ -117,6 +117,8 @@ x-aal: aal2
 | `URL_NOT_FOUND` | 404 | Short URL code not found |
 | `LINK_EXPIRED` | 410 | Short URL has passed its expiry date |
 | `LINK_NOT_ACTIVE` | 410 | Short URL is scheduled but not yet active |
+| `QR_CODE_EXPIRED` | 410 | QR code has passed its `qrExpiresAt` date |
+| `QR_NOT_YET_EXPIRED` | 400 | Attempted to regenerate a QR that has not yet expired |
 | `LINK_PASSWORD_REQUIRED` | 401 | Link is password-protected; token needed |
 | `INCORRECT_PASSWORD` | 403 | Submitted password does not match |
 | `PASSWORD_EXPIRED` | 403 | Link password has expired per policy |
@@ -440,6 +442,7 @@ Create a new short URL.
 | `ttlDays` | number | no | Link expiry in days (1-365). `null` = never expires. |
 | `password` | string | no | Password protect the link (4-128 chars). Requires plan feature. |
 | `activeAt` | string (ISO 8601) | no | Schedule activation date/time. |
+| `qrExpiresAt` | string (ISO 8601) | no | QR code expiry date (independent of link TTL). |
 | `blockBots` | boolean | no | Block known bots from accessing. Default `false`. |
 | `tags` | string[] | no | Tag names to attach (max 10, max 50 chars each). Tags must exist. |
 | `collectionId` | number | no | Collection ID to add link to. Requires plan feature. |
@@ -459,6 +462,7 @@ Create a new short URL.
     "uniqueVisits": 0,
     "expiresAt": "2024-08-15T12:00:00.000Z",
     "activeAt": null,
+    "qrExpiresAt": null,
     "hasPassword": false,
     "blockBots": false,
     "createdAt": "2024-07-15T12:00:00.000Z"
@@ -597,6 +601,7 @@ Get metadata about a short URL without redirecting.
     "uniqueVisits": 35,
     "expiresAt": null,
     "activeAt": null,
+    "qrExpiresAt": null,
     "hasPassword": false,
     "blockBots": false,
     "createdAt": "2024-01-01T00:00:00.000Z"
@@ -690,9 +695,17 @@ CSV columns: `id`, `code`, `ip_address`, `user_agent`, `referer`, `country`, `ci
 
 ### `GET /api/urls/:code/qr`
 
-Generate a QR code for the short URL's destination.
+Get a QR code for the short URL. The QR encodes the **short URL** (not the destination), so scans are recorded as visits and respect link expiry, password protection, and scheduled activation.
 
-**Auth**: None
+**Auth**: Required (owner only)
+
+**Rate Limit**: Standard (120 req/min)
+
+**Path Parameters**:
+
+| Param | Type | Description |
+|---|---|---|
+| `code` | string | Short URL code (3-16 alphanumeric) |
 
 **Query Parameters**:
 
@@ -701,9 +714,64 @@ Generate a QR code for the short URL's destination.
 | `format` | enum | `png` | `png` or `svg` |
 | `logo` | string | — | URL of an optional logo image to embed in the centre |
 
-**Response**:
-- PNG: `image/png`
-- SVG: `image/svg+xml`
+**Response** `200`:
+- `Content-Type: image/png` or `image/svg+xml`
+- `Content-Disposition: attachment; filename="<code>-qr.<format>"`
+
+The QR is cached in the `qr_codes` table on first generation. Subsequent requests with the same `(code, format, logo)` combination return the cached version.
+
+**Error Responses**:
+- `404 URL_NOT_FOUND` — code does not exist or is not owned by the requesting user
+- `410 QR_CODE_EXPIRED` — QR has a `qrExpiresAt` date that has passed
+
+**cURL Example**:
+```bash
+curl -H "Authorization: Bearer $TOKEN" \
+  "http://localhost:3000/api/urls/aB3xK9m/qr?format=svg&logo=https://example.com/logo.png" \
+  --output qr-code.svg
+```
+
+---
+
+### `POST /api/urls/:code/qr/regenerate`
+
+Regenerate an expired QR code with a new expiry date.
+
+**Auth**: Required (owner only)
+
+**Rate Limit**: Standard (120 req/min)
+
+**Path Parameters**:
+
+| Param | Type | Description |
+|---|---|---|
+| `code` | string | Short URL code (3-16 alphanumeric) |
+
+**Query Parameters**:
+
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `format` | enum | `png` | `png` or `svg` |
+| `logo` | string | — | URL of an optional logo image to embed in the centre |
+
+**Request Body**:
+```json
+{
+  "expiresAt": "2025-12-31T23:59:59.000Z"
+}
+```
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `expiresAt` | string (ISO 8601) | **yes** | New expiry datetime for the QR code |
+
+The `expiresAt` datetime must be in ISO 8601 format.
+
+**Response** `200`: Same as `GET /api/urls/:code/qr` — the new QR code image.
+
+**Error Responses**:
+- `404 URL_NOT_FOUND` — code does not exist or is not owned by the requesting user
+- `400 QR_NOT_YET_EXPIRED` — QR has not expired yet; cannot regenerate until after `qrExpiresAt`
 
 ---
 
@@ -779,6 +847,7 @@ Update a short URL's settings.
 {
   "activeAt": "2024-08-01T00:00:00.000Z",
   "expiresAt": "2025-01-01T00:00:00.000Z",
+  "qrExpiresAt": "2025-06-01T00:00:00.000Z",
   "password": "new-password",
   "blockBots": true
 }
@@ -788,6 +857,7 @@ Update a short URL's settings.
 |---|---|---|
 | `activeAt` | string \| null | ISO 8601 date or `null` to clear |
 | `expiresAt` | string \| null | ISO 8601 date or `null` to clear |
+| `qrExpiresAt` | string \| null | ISO 8601 date or `null` to clear (independent of link expiry) |
 | `password` | string \| null | New password or `null` to remove |
 | `blockBots` | boolean | Toggle bot blocking |
 
@@ -2128,6 +2198,7 @@ Stripe webhook receiver. Expects raw JSON body with Stripe signature verificatio
 | `blockBots` | BOOLEAN | DEFAULT false, NOT NULL | Block known bots |
 | `activeAt` | TIMESTAMP | — | Scheduled activation time |
 | `expiresAt` | TIMESTAMP | — | Link expiry time |
+| `qrExpiresAt` | TIMESTAMP | — | QR code expiry time (independent of link expiry) |
 | `deletedAt` | TIMESTAMP | — | Soft-delete timestamp |
 | `lastCheckedAt` | TIMESTAMP | — | Last health check timestamp |
 | `lastStatusCode` | INTEGER | — | Last health check HTTP status |
@@ -2298,3 +2369,18 @@ Hourly aggregated visit statistics (last 7 days available).
 | `updatedAt` | TIMESTAMP | DEFAULT NOW(), NOT NULL | Last update time |
 
 **Unique**: `(userId, domain)`, `(domain)`
+
+### `qr_codes`
+
+Cached QR code images, keyed by URL code + format + optional logo.
+
+| Column | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | SERIAL | PK | Auto-increment ID |
+| `code` | TEXT | FK → urls.code, NOT NULL, ON DELETE CASCADE | Short URL code |
+| `format` | TEXT | NOT NULL | `png` or `svg` |
+| `data` | TEXT | NOT NULL | Base64-encoded PNG binary or SVG text |
+| `logoUrl` | TEXT | — | Optional centre logo URL |
+| `createdAt` | TIMESTAMP | DEFAULT NOW(), NOT NULL | Creation time |
+
+**Unique**: `(code, format, COALESCE(logoUrl, ''))`

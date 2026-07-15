@@ -451,7 +451,7 @@
       "url": "https://21st.dev/api/mcp",
       "enabled": true,
       "headers": {
-        "x-api-key": "21st_sk_e97f6ad7dba85817321fea2aeb876ba733738c50511181f8610ba07026a4c697"
+        "x-api-key": "${21ST_API_KEY}"
       }
     }
   },

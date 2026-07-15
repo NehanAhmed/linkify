@@ -1,5 +1,20 @@
 import { cn } from "@/lib/utils"
-import { useState, useRef, useEffect, type ReactNode } from "react"
+import { createContext, useContext, useState, useRef, useEffect, type ReactNode } from "react"
+
+interface CommandContextValue {
+  search: string
+  setSearch: (search: string) => void
+  filter?: (value: string, search: string) => boolean
+  inputRef: React.RefObject<HTMLInputElement | null>
+}
+
+const CommandContext = createContext<CommandContextValue | undefined>(undefined)
+
+function useCommand() {
+  const ctx = useContext(CommandContext)
+  if (!ctx) throw new Error("Command components must be used within Command")
+  return ctx
+}
 
 interface CommandProps {
   children: ReactNode
@@ -16,26 +31,27 @@ export function Command({ children, className, filter }: CommandProps) {
   }, [])
 
   return (
-    <div className={cn("", className)}>
-      {children}
-    </div>
+    <CommandContext.Provider value={{ search, setSearch, filter, inputRef }}>
+      <div className={cn("", className)}>
+        {children}
+      </div>
+    </CommandContext.Provider>
   )
 }
 
 interface CommandInputProps {
   placeholder?: string
-  value?: string
-  onValueChange?: (value: string) => void
   className?: string
 }
 
-export function CommandInput({ placeholder = "Search...", value, onValueChange, className }: CommandInputProps) {
+export function CommandInput({ placeholder = "Search...", className }: CommandInputProps) {
+  const { search, setSearch, inputRef } = useCommand()
   return (
     <div className="flex items-center border-b border-border px-3">
       <input
-        ref={(el) => el?.focus()}
-        value={value}
-        onChange={(e) => onValueChange?.(e.target.value)}
+        ref={inputRef}
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
         placeholder={placeholder}
         className={cn(
           "flex h-9 w-full rounded-md bg-transparent py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground",
@@ -81,6 +97,12 @@ interface CommandItemProps {
 }
 
 export function CommandItem({ children, value, onSelect, disabled, className }: CommandItemProps) {
+  const { search, filter } = useCommand()
+  if (search) {
+    const match = filter ? filter(value ?? "", search) : value?.toLowerCase().includes(search.toLowerCase())
+    if (!match) return null
+  }
+
   return (
     <button
       type="button"

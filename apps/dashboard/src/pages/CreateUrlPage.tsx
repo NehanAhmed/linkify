@@ -13,6 +13,18 @@ import { Card, CardContent } from "@/components/ui/card"
 import CopyButton from "@/components/copy-button"
 import { Link2, CheckCircle, Loader2, Plus, X } from "lucide-react"
 
+function normalizeUrl(url: string): string {
+  if (!url.trim()) return ""
+  const normalized = url.startsWith("http") ? url : `https://${url}`
+  try {
+    const parsed = new URL(normalized)
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return ""
+    return normalized
+  } catch {
+    return ""
+  }
+}
+
 const TTL_PRESETS = [
   { label: "7 days", value: 7 },
   { label: "30 days", value: 30 },
@@ -94,23 +106,24 @@ export default function CreateUrlPage() {
 
     if (!form.url.trim()) {
       errs.url = "URL is required"
-    } else {
-      try {
-        new URL(form.url.startsWith("http") ? form.url : `https://${form.url}`)
-      } catch {
-        errs.url = "Invalid URL"
-      }
+    } else if (!normalizeUrl(form.url)) {
+      errs.url = "Invalid URL"
     }
 
-    if (form.customCode && (form.customCode.length < 3 || form.customCode.length > 16)) {
-      errs.customCode = "Custom code must be 3-16 characters"
+    if (form.customCode) {
+      if (form.customCode.length < 3 || form.customCode.length > 16) {
+        errs.customCode = "Custom code must be 3-16 characters"
+      } else if (!/^[a-zA-Z0-9_-]+$/.test(form.customCode)) {
+        errs.customCode = "Custom code can only contain letters, numbers, hyphens, and underscores"
+      }
     }
 
     if (form.password && (form.password.length < 4 || form.password.length > 128)) {
       errs.password = "Password must be 4-128 characters"
     }
 
-    if (form.ttlDays && (Number(form.ttlDays) < 1 || Number(form.ttlDays) > 365)) {
+    const ttl = Number(form.ttlDays)
+    if (form.ttlDays && ttl !== 0 && (ttl < 1 || ttl > 365)) {
       errs.ttlDays = "TTL must be between 1 and 365 days"
     }
 
@@ -126,13 +139,12 @@ export default function CreateUrlPage() {
     try {
       let activeAt: string | undefined
       if (form.activeAt) {
-        activeAt = form.activeTime
-          ? `${form.activeAt}T${form.activeTime}:00.000Z`
-          : `${form.activeAt}T00:00:00.000Z`
+        const dateStr = form.activeTime ? `${form.activeAt}T${form.activeTime}:00` : `${form.activeAt}T00:00:00`
+        activeAt = new Date(dateStr).toISOString()
       }
 
       const result = await createUrl(token, {
-        url: form.url.startsWith("http") ? form.url : `https://${form.url}`,
+        url: normalizeUrl(form.url),
         customCode: form.customCode || undefined,
         ttlDays: form.ttlDays ? Number(form.ttlDays) : undefined,
         password: form.password || undefined,
@@ -309,10 +321,11 @@ export default function CreateUrlPage() {
             {/* Block bots */}
             <div className="flex items-center justify-between rounded-lg border border-border p-3">
               <div>
-                <Label className="text-sm font-medium">Block bots</Label>
+                <Label htmlFor="block-bots" className="text-sm font-medium">Block bots</Label>
                 <p className="text-xs text-muted-foreground">Prevent automated crawlers from accessing this link</p>
               </div>
               <Switch
+                id="block-bots"
                 checked={form.blockBots}
                 onCheckedChange={(checked) => updateField("blockBots", checked)}
               />

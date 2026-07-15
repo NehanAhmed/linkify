@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "@/hooks/use-auth"
 import { listUrls, listTags, listCollections, softDeleteUrl } from "@/lib/api"
 import type { ShortUrl, Tag, Collection, Pagination as PaginatedInfo } from "@linkify/shared"
 import { toast } from "sonner"
-import { useSearchParams, Link } from "react-router-dom"
+import { useSearchParams, Link, useNavigate } from "react-router-dom"
 import PageHeader from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -69,6 +69,7 @@ const defaultFilters: FiltersState = {
 export default function UrlsListPage() {
   const { session } = useAuth()
   const token = session?.access_token ?? ""
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const getFilters = useCallback((): FiltersState => {
@@ -92,8 +93,26 @@ export default function UrlsListPage() {
 
   const totalActiveFilters = [filters.tagIds, filters.collectionId, filters.createdAfter, filters.createdBefore, filters.hasPassword, filters.isActive].filter(Boolean).length
 
+  async function fetchAllPages<T>(
+    fetcher: (page: number) => Promise<{ items: T[]; pagination: PaginatedInfo }>,
+  ): Promise<T[]> {
+    const first = await fetcher(1)
+    const all = [...first.items]
+    const totalPages = first.pagination.totalPages ?? 1
+    for (let p = 2; p <= totalPages; p++) {
+      const page = await fetcher(p)
+      all.push(...page.items)
+    }
+    return all
+  }
+
+  const abortRef = useRef<AbortController | null>(null)
+
   const fetchData = useCallback(async () => {
     if (!token) return
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     try {
       const params = new URLSearchParams()
@@ -102,23 +121,27 @@ export default function UrlsListPage() {
       }
       const [urlsData, tagsData, collectionsData] = await Promise.all([
         listUrls(token, Object.fromEntries(params)),
-        listTags(token).catch(() => ({ tags: [], pagination: { total: 0 } as PaginatedInfo })),
-        listCollections(token).catch(() => ({ collections: [], pagination: { total: 0 } as PaginatedInfo })),
+        fetchAllPages((page) => listTags(token, { page }).then((d) => ({ items: d.tags, pagination: d.pagination }))).catch(() => [] as Tag[]),
+        fetchAllPages((page) => listCollections(token, { page }).then((d) => ({ items: d.collections, pagination: d.pagination }))).catch(() => [] as Collection[]),
       ])
-      setUrls(urlsData.urls)
-      setPagination(urlsData.pagination)
-      setTags(tagsData.tags)
-      setCollections(collectionsData.collections)
+      if (!controller.signal.aborted) {
+        setUrls(urlsData.urls)
+        setPagination(urlsData.pagination)
+        setTags(tagsData)
+        setCollections(collectionsData)
+      }
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
       const msg = err instanceof Error ? err.message : "Failed to load URLs"
-      toast.error(msg)
+      if (!controller.signal.aborted) toast.error(msg)
     } finally {
-      setLoading(false)
+      if (!controller.signal.aborted) setLoading(false)
     }
   }, [token, filters])
 
   useEffect(() => {
     fetchData()
+    return () => abortRef.current?.abort()
   }, [fetchData])
 
   useEffect(() => {
@@ -345,6 +368,7 @@ export default function UrlsListPage() {
                 <TableHead className="w-10">
                   <input
                     type="checkbox"
+                    aria-label="Select all URLs"
                     checked={selected.size === urls.length && urls.length > 0}
                     onChange={toggleSelectAll}
                     className="h-4 w-4 rounded border-border"
@@ -382,6 +406,7 @@ export default function UrlsListPage() {
                     <TableCell>
                       <input
                         type="checkbox"
+                        aria-label={`Select ${url.code}`}
                         checked={selected.has(url.code)}
                         onChange={() => toggleSelect(url.code)}
                         className="h-4 w-4 rounded border-border"
@@ -444,12 +469,10 @@ export default function UrlsListPage() {
                             Copy destination URL
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <Link to={`/urls/${url.code}/settings`}>
-                            <DropdownMenuItem>
-                              <Settings className="mr-2 h-4 w-4" />
-                              Settings
-                            </DropdownMenuItem>
-                          </Link>
+                          <DropdownMenuItem onClick={() => navigate(`/urls/${url.code}/settings`)}>
+                            <Settings className="mr-2 h-4 w-4" />
+                            Settings
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setDeleteDialog(url.code)}>
                             <Trash2 className="mr-2 h-4 w-4 text-destructive" />
