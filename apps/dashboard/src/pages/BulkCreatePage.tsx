@@ -178,29 +178,37 @@ export default function BulkCreatePage() {
             </div>
 
             <div className="space-y-2">
-              {results.map((result, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between rounded-lg border border-border p-3"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {result.success ? (
-                      <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />
-                    ) : (
-                      <XCircle className="h-4 w-4 shrink-0 text-destructive" />
-                    )}
-                    <div className="min-w-0">
+              {results.map((result, i) => {
+                const originalUrl = result.index !== undefined ? validUrls[result.index]?.original : validUrls[i]?.original
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
                       {result.success ? (
-                        <BulkResultSuccess result={result} />
+                        <CheckCircle className="h-4 w-4 shrink-0 text-emerald-500" />
                       ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {result.error ?? "Unknown error"}
-                        </span>
+                        <XCircle className="h-4 w-4 shrink-0 text-destructive" />
                       )}
+                      <div className="min-w-0">
+                        {result.success ? (
+                          <BulkResultSuccess result={result} />
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            {result.error ?? "Unknown error"}
+                          </span>
+                        )}
+                        {originalUrl && (
+                          <p className="text-xs text-muted-foreground truncate max-w-[300px] mt-0.5">
+                            {originalUrl}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <Button className="mt-4" onClick={() => navigate("/urls")}>

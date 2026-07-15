@@ -97,60 +97,74 @@ export default function UrlDetailPage() {
   const [qrFormat, setQrFormat] = useState<"png" | "svg">("png")
   const [qrLogo, setQrLogo] = useState("")
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [qrResultFormat, setQrResultFormat] = useState<"png" | "svg">("png")
   const [deleteDialog, setDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showTotal, setShowTotal] = useState(true)
 
-  const fetchUrlInfo = useCallback(async () => {
+  const fetchUrlInfo = useCallback(async (signal?: AbortSignal) => {
     if (!code) return
     try {
-      const data = await getUrlInfo(token, code)
-      setUrlInfo(data)
+      const data = await getUrlInfo(token, code, signal)
+      if (!signal?.aborted) setUrlInfo(data)
     } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
       const msg = err instanceof Error ? err.message : "URL not found"
-      toast.error(msg)
-      navigate("/urls")
+      if (!signal?.aborted) toast.error(msg)
+      if (!signal?.aborted) navigate("/urls")
     }
   }, [code, token, navigate])
 
-  const fetchVisits = useCallback(async (page = 1) => {
+  const fetchVisits = useCallback(async (page = 1, signal?: AbortSignal) => {
     if (!code) return
     setVisitsLoading(true)
     try {
-      const data = await getUrlVisits(code, { page, limit: 15 })
-      setVisits(data.visits)
-      setVisitsPagination(data.pagination)
-    } catch {
-      toast.error("Failed to load visits")
+      const data = await getUrlVisits(token, code, { page, limit: 15 }, signal)
+      if (!signal?.aborted) {
+        setVisits(data.visits)
+        setVisitsPagination(data.pagination)
+      }
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
+      if (!signal?.aborted) toast.error("Failed to load visits")
     } finally {
-      setVisitsLoading(false)
+      if (!signal?.aborted) setVisitsLoading(false)
     }
-  }, [code])
+  }, [code, token])
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (signal?: AbortSignal) => {
     if (!code) return
     setStatsLoading(true)
     try {
-      const data = await getUrlStats(code)
-      setStats(data)
-    } catch {
-      toast.error("Failed to load stats")
+      const data = await getUrlStats(token, code, signal)
+      if (!signal?.aborted) setStats(data)
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === "AbortError") return
+      if (!signal?.aborted) toast.error("Failed to load stats")
     } finally {
-      setStatsLoading(false)
+      if (!signal?.aborted) setStatsLoading(false)
     }
-  }, [code])
+  }, [code, token])
 
   useEffect(() => {
     if (!code) return
+    const abortController = new AbortController()
     setLoading(true)
-    Promise.all([fetchUrlInfo(), fetchVisits(), fetchStats()]).finally(() => setLoading(false))
+    Promise.all([
+      fetchUrlInfo(abortController.signal),
+      fetchVisits(1, abortController.signal),
+      fetchStats(abortController.signal),
+    ]).finally(() => {
+      if (!abortController.signal.aborted) setLoading(false)
+    })
+    return () => abortController.abort()
   }, [code, fetchUrlInfo, fetchVisits, fetchStats])
 
   const handleExportCsv = async () => {
     if (!code) return
     setCsvLoading(true)
     try {
-      const blob = await exportVisitsCsv(code)
+      const blob = await exportVisitsCsv(token, code)
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
@@ -165,14 +179,22 @@ export default function UrlDetailPage() {
     }
   }
 
+  useEffect(() => {
+    return () => {
+      if (qrDataUrl) URL.revokeObjectURL(qrDataUrl)
+    }
+  }, [])
+
   const handleGenerateQr = async () => {
     if (!code) return
     setQrLoading(true)
+    if (qrDataUrl) URL.revokeObjectURL(qrDataUrl)
     setQrDataUrl(null)
     try {
       const blob = await generateQrCode(code, qrFormat, qrLogo || undefined)
-      const url = window.URL.createObjectURL(blob)
+      const url = URL.createObjectURL(blob)
       setQrDataUrl(url)
+      setQrResultFormat(qrFormat)
     } catch {
       toast.error("Failed to generate QR code")
     } finally {
@@ -227,11 +249,12 @@ export default function UrlDetailPage() {
         description="View link analytics and activity"
         actions={
           <div className="flex gap-2">
-            <Link to={`/urls/${code}/settings`}>
-              <Button variant="outline" size="sm">
-                <Settings className="mr-1.5 h-4 w-4" />
-                Settings
-              </Button>
+            <Link
+              to={`/urls/${code}/settings`}
+              className="inline-flex items-center justify-center whitespace-nowrap rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:pointer-events-none disabled:opacity-50 select-none h-8 px-3 text-xs border border-border bg-background text-foreground hover:bg-muted active:translate-y-[1px]"
+            >
+              <Settings className="mr-1.5 h-4 w-4" />
+              Settings
             </Link>
             <Button variant="outline" size="sm" onClick={() => setDeleteDialog(true)}>
               <Trash2 className="mr-1.5 h-4 w-4 text-destructive" />
@@ -578,8 +601,9 @@ export default function UrlDetailPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Format</label>
+                  <label htmlFor="qr-format" className="text-xs font-medium text-muted-foreground">Format</label>
                   <select
+                    id="qr-format"
                     value={qrFormat}
                     onChange={(e) => setQrFormat(e.target.value as "png" | "svg")}
                     className="flex h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
@@ -589,8 +613,9 @@ export default function UrlDetailPage() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-muted-foreground">Logo URL (optional)</label>
+                  <label htmlFor="qr-logo" className="text-xs font-medium text-muted-foreground">Logo URL (optional)</label>
                   <input
+                    id="qr-logo"
                     value={qrLogo}
                     onChange={(e) => setQrLogo(e.target.value)}
                     placeholder="https://example.com/logo.png"
@@ -613,7 +638,7 @@ export default function UrlDetailPage() {
                   <img src={qrDataUrl} alt="QR Code" className="h-48 w-48" />
                   <a
                     href={qrDataUrl}
-                    download={`${code}-qr.${qrFormat}`}
+                    download={`${code}-qr.${qrResultFormat}`}
                     className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
                   >
                     <Download className="h-4 w-4" />

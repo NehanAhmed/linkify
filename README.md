@@ -30,7 +30,7 @@
 | **Collections** | Nested folders with drag-style reordering and public sharing |
 | **Tags** | Colour-coded labels with bulk assignment |
 | **Custom Domains** | Bring your own domain with DNS verification + SSL tracking |
-| **QR Codes** | PNG/SVG generation with optional logo embedding |
+| **QR Codes** | PNG/SVG generation with caching, optional logo embedding, and time-limited expiry |
 | **Bulk Operations** | Tag, move, extend expiry, or delete multiple links at once |
 | **CSV Import/Export** | Import up to 500 URLs; export visit logs as CSV |
 | **Link Chaining** | Point short links to other short links (max 5 hops, cycle detection) |
@@ -164,7 +164,8 @@ curl -L http://localhost:3000/aB3xK9m
 | `GET /api/urls/:code/visits` | Visit log |
 | `GET /api/urls/:code/stats` | Analytics (hourly/daily aggregation) |
 | `GET /api/urls/:code/visits/export` | CSV export of visits |
-| `GET /api/urls/:code/qr` | QR code generation |
+| `GET /api/urls/:code/qr` | QR code generation (cached, time-limited) |
+| `POST /api/urls/:code/qr/regenerate` | Regenerate expired QR code |
 | `POST /api/urls/:code/verify-password` | Password verification |
 | `PATCH /api/urls/:code/settings` | Update link settings |
 | `POST /api/collections` | Create collection |

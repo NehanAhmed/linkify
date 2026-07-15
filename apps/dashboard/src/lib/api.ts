@@ -171,45 +171,46 @@ export function bulkCreateUrls(token: string, urls: { url: string; customCode?: 
   )
 }
 
-export function listUrls(token: string, params?: Record<string, string>) {
+export function listUrls(token: string, params?: Record<string, string>, signal?: AbortSignal) {
   const searchParams = new URLSearchParams(params)
   const qs = searchParams.toString()
   return request<{ urls: ShortUrl[]; pagination: Pagination }>(
     `/api/urls${qs ? `?${qs}` : ""}`,
-    { headers: setAuthHeader(token) }
+    { headers: setAuthHeader(token), signal }
   )
 }
 
-export function getUrlInfo(token: string | null, code: string) {
+export function getUrlInfo(token: string | null, code: string, signal?: AbortSignal) {
   const headers = token ? setAuthHeader(token) : undefined
   return request<ShortUrl>(
     `/api/urls/${code}/info`,
-    headers ? { headers } : undefined
+    headers ? { headers, signal } : { signal }
   )
 }
 
-export function getUrlVisits(code: string, params?: { page?: number; limit?: number }) {
+export function getUrlVisits(token: string, code: string, params?: { page?: number; limit?: number }, signal?: AbortSignal) {
   const searchParams = new URLSearchParams()
   if (params?.page) searchParams.set("page", String(params.page))
   if (params?.limit) searchParams.set("limit", String(params.limit))
   const qs = searchParams.toString()
   return request<{ visits: Visit[]; pagination: Pagination }>(
-    `/api/urls/${code}/visits${qs ? `?${qs}` : ""}`
+    `/api/urls/${code}/visits${qs ? `?${qs}` : ""}`,
+    { headers: setAuthHeader(token), signal }
   )
 }
 
-export function getUrlStats(code: string) {
-  return request<VisitStats>(`/api/urls/${code}/stats`)
+export function getUrlStats(token: string, code: string, signal?: AbortSignal) {
+  return request<VisitStats>(`/api/urls/${code}/stats`, { headers: setAuthHeader(token), signal })
 }
 
-export function exportVisitsCsv(code: string) {
-  return requestBlob(`/api/urls/${code}/visits/export`)
+export function exportVisitsCsv(token: string, code: string) {
+  return requestBlob(`/api/urls/${code}/visits/export`, { headers: setAuthHeader(token) })
 }
 
-export function generateQrCode(code: string, format: "png" | "svg" = "png", logo?: string) {
+export function generateQrCode(code: string, format: "png" | "svg" = "png", logo?: string, signal?: AbortSignal) {
   const searchParams = new URLSearchParams({ format })
   if (logo) searchParams.set("logo", logo)
-  return requestBlob(`/api/urls/${code}/qr?${searchParams.toString()}`)
+  return requestBlob(`/api/urls/${code}/qr?${searchParams.toString()}`, { signal })
 }
 
 export function updateUrlSettings(token: string, code: string, payload: UpdateUrlSettingsPayload) {
