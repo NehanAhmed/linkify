@@ -81,6 +81,7 @@ export async function getUrlInfo(req: Request, res: Response, next: NextFunction
         activeAt: url.activeAt?.toISOString() ?? null,
         hasPassword: !!url.passwordHash,
         blockBots: url.blockBots,
+        qrExpiresAt: url.qrExpiresAt?.toISOString() ?? null,
         createdAt: url.createdAt.toISOString(),
       },
     })

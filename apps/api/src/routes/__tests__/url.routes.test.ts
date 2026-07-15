@@ -25,6 +25,7 @@ const mockLinkController = vi.hoisted(() => ({
 
 const mockQrController = vi.hoisted(() => ({
   generateQr: vi.fn(),
+  regenerateQr: vi.fn(),
 }))
 
 vi.mock('../../controllers/url.controllers', () => mockUrlController)
@@ -193,6 +194,14 @@ describe('URL Routes', () => {
       res.json({ success: true, data: [{ success: true, code: 'abc' }] })
     })
     const res = await supertest(createApp()).post('/bulk-operations').send({ operation: 'delete', codes: ['abc'] })
+    expect(res.status).toBe(200)
+  })
+
+  it('POST /:code/qr/regenerate — regenerates QR code', async () => {
+    mockQrController.regenerateQr.mockImplementation((_req, res) => {
+      res.setHeader('Content-Type', 'image/png').send(Buffer.from('new-qr'))
+    })
+    const res = await supertest(createApp()).post('/abc/qr/regenerate').send({ expiresAt: '2026-12-31T23:59:59.000Z' })
     expect(res.status).toBe(200)
   })
 

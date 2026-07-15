@@ -1,5 +1,5 @@
 import { db, dbReplica } from '../db'
-import { urls, visits, tags, urlTags, urlCollections, collections, urlStatsHourly } from '../db/schema'
+import { urls, visits, tags, urlTags, urlCollections, collections, urlStatsHourly, qrCodes } from '../db/schema'
 import { eq, desc, count, sql, and, gte, isNull, inArray, asc, type SQL } from 'drizzle-orm'
 import { generateShortCode } from '../utils/codeGenerator'
 import { RESERVED_CODES } from '../constants/reservedWords'
@@ -22,6 +22,41 @@ const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
 
 export { AppError } from '../utils/AppError'
+
+export async function getQrCache(code: string, format: string, logoUrl?: string) {
+  const rows = await db
+    .select({ data: qrCodes.data, createdAt: qrCodes.createdAt })
+    .from(qrCodes)
+    .where(
+      and(
+        eq(qrCodes.code, code),
+        eq(qrCodes.format, format),
+        logoUrl ? eq(qrCodes.logoUrl, logoUrl) : sql`${qrCodes.logoUrl} IS NULL`,
+      ),
+    )
+    .limit(1)
+  return rows[0] ?? null
+}
+
+export async function setQrCache(code: string, format: string, data: string, logoUrl?: string) {
+  await db
+    .delete(qrCodes)
+    .where(
+      and(
+        eq(qrCodes.code, code),
+        eq(qrCodes.format, format),
+        logoUrl ? eq(qrCodes.logoUrl, logoUrl) : sql`${qrCodes.logoUrl} IS NULL`,
+      ),
+    )
+
+  await db
+    .insert(qrCodes)
+    .values({ code, format, data, logoUrl: logoUrl ?? null })
+}
+
+export async function deleteAllQrCaches(code: string) {
+  await db.delete(qrCodes).where(eq(qrCodes.code, code))
+}
 
 export async function createShortUrl(input: CreateUrlInput, userId: string) {
   const code = input.customCode || generateShortCode()
@@ -66,6 +101,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
   const activeAt = input.activeAt ? new Date(input.activeAt) : null
   const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
   const blockBots = input.blockBots ?? false
+  const qrExpiresAt = input.qrExpiresAt ? new Date(input.qrExpiresAt) : null
 
   await db.insert(urls).values({
     code,
@@ -75,6 +111,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
     activeAt,
     passwordHash,
     blockBots,
+    qrExpiresAt,
   })
 
   fetchLinkPreview(input.url)
@@ -115,7 +152,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
       .catch(() => {})
   }
 
-  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined, undefined, !!passwordHash, activeAt, blockBots)
+  return formatUrlResponse(code, input.url, 0, 0, expiresAt, undefined, undefined, undefined, undefined, !!passwordHash, activeAt, blockBots, qrExpiresAt)
 }
 
 export async function resolveUrl(code: string) {
@@ -466,7 +503,7 @@ export async function listUrls(query: ListUrlsQueryInput, userId?: string, isAdm
 
   return {
     urls: rows.map((u) => formatUrlResponse(
-      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt, !!u.passwordHash, u.activeAt, u.blockBots,
+      u.code, u.url, u.visits, u.uniqueVisits, u.expiresAt, u.title, u.description, u.image, u.createdAt, !!u.passwordHash, u.activeAt, u.blockBots, u.qrExpiresAt,
     )),
     pagination: {
       page,
@@ -561,6 +598,7 @@ function formatUrlResponse(
   hasPassword?: boolean,
   activeAt?: Date | null,
   blockBots?: boolean,
+  qrExpiresAt?: Date | null,
 ) {
   return {
     code,
@@ -575,6 +613,7 @@ function formatUrlResponse(
     activeAt: activeAt?.toISOString() ?? null,
     hasPassword: hasPassword ?? false,
     blockBots: blockBots ?? false,
+    qrExpiresAt: qrExpiresAt?.toISOString() ?? null,
     createdAt: (createdAt ?? new Date()).toISOString(),
   }
 }

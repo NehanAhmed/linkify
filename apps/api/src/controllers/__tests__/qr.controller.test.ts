@@ -1,15 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { Request, Response, NextFunction } from 'express'
 
+const mockDb = vi.hoisted(() => ({
+  select: vi.fn(),
+}))
+
+vi.mock('../../db', () => ({
+  db: mockDb,
+}))
+
+vi.mock('../../utils/env', () => ({
+  env: { BASE_URL: 'http://localhost:3000' },
+}))
+
 vi.mock('../../services/qr.service', () => ({
   generateQrCode: vi.fn(),
 }))
 
 vi.mock('../../services/url.services', () => ({
-  resolveUrl: vi.fn(),
+  getQrCache: vi.fn(),
+  setQrCache: vi.fn(),
+  deleteAllQrCaches: vi.fn(),
 }))
 
 import * as qrController from '../qr.controller'
+
+function mockChain() {
+  const chain: any = { limit: vi.fn() }
+  chain.where = vi.fn().mockReturnValue(chain)
+  chain.from = vi.fn().mockReturnValue(chain)
+  chain.limit = vi.fn().mockResolvedValue([])
+  return chain
+}
 
 function mockReq(overrides: Partial<Request> = {}): Request {
   return {
@@ -34,83 +56,142 @@ beforeEach(() => {
 })
 
 describe('generateQr', () => {
+  function setupDbRow(overrides = {}) {
+    const chain = mockChain()
+    chain.limit.mockResolvedValue([{ qrExpiresAt: null, userId: 'user-1', ...overrides }])
+    mockDb.select.mockReturnValue(chain)
+    return chain
+  }
+
   it('generates PNG QR code', async () => {
+    setupDbRow()
     const req = mockReq({ params: { code: 'abc' }, query: { format: 'png' } })
     const res = mockRes()
     const next = vi.fn()
 
-    const { resolveUrl } = await import('../../services/url.services')
+    const { getQrCache } = await import('../../services/url.services')
     const { generateQrCode } = await import('../../services/qr.service')
 
-    vi.mocked(resolveUrl).mockResolvedValueOnce({ url: 'https://example.com' } as any)
-    vi.mocked(generateQrCode).mockResolvedValueOnce(Buffer.from('png-data'))
+    vi.mocked(getQrCache).mockResolvedValue(null as any)
+    vi.mocked(generateQrCode).mockResolvedValue(Buffer.from('png-data'))
 
     await qrController.generateQr(req, res, next)
 
+    expect(generateQrCode).toHaveBeenCalledWith('http://localhost:3000/abc', 'png', undefined)
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/png')
     expect(res.send).toHaveBeenCalledWith(Buffer.from('png-data'))
   })
 
   it('generates SVG QR code', async () => {
+    setupDbRow()
     const req = mockReq({ params: { code: 'abc' }, query: { format: 'svg' } })
     const res = mockRes()
     const next = vi.fn()
 
-    const { resolveUrl } = await import('../../services/url.services')
+    const { getQrCache } = await import('../../services/url.services')
     const { generateQrCode } = await import('../../services/qr.service')
 
-    vi.mocked(resolveUrl).mockResolvedValueOnce({ url: 'https://example.com' } as any)
-    vi.mocked(generateQrCode).mockResolvedValueOnce('<svg>...</svg>')
+    vi.mocked(getQrCache).mockResolvedValue(null as any)
+    vi.mocked(generateQrCode).mockResolvedValue('<svg>...</svg>')
 
     await qrController.generateQr(req, res, next)
 
+    expect(generateQrCode).toHaveBeenCalledWith('http://localhost:3000/abc', 'svg', undefined)
     expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/svg+xml')
     expect(res.send).toHaveBeenCalledWith('<svg>...</svg>')
   })
 
   it('generates QR with logo', async () => {
+    setupDbRow()
     const req = mockReq({ params: { code: 'abc' }, query: { format: 'png', logo: 'https://example.com/logo.png' } })
     const res = mockRes()
     const next = vi.fn()
 
-    const { resolveUrl } = await import('../../services/url.services')
+    const { getQrCache } = await import('../../services/url.services')
     const { generateQrCode } = await import('../../services/qr.service')
 
-    vi.mocked(resolveUrl).mockResolvedValueOnce({ url: 'https://example.com' } as any)
-    vi.mocked(generateQrCode).mockResolvedValueOnce(Buffer.from('png-with-logo'))
+    vi.mocked(getQrCache).mockResolvedValue(null as any)
+    vi.mocked(generateQrCode).mockResolvedValue(Buffer.from('png-with-logo'))
 
     await qrController.generateQr(req, res, next)
 
-    expect(generateQrCode).toHaveBeenCalledWith('https://example.com', 'png', 'https://example.com/logo.png')
+    expect(generateQrCode).toHaveBeenCalledWith('http://localhost:3000/abc', 'png', 'https://example.com/logo.png')
     expect(res.send).toHaveBeenCalledWith(Buffer.from('png-with-logo'))
   })
 
   it('defaults to PNG format', async () => {
+    setupDbRow()
     const req = mockReq({ params: { code: 'abc' }, query: {} })
     const res = mockRes()
     const next = vi.fn()
 
-    const { resolveUrl } = await import('../../services/url.services')
+    const { getQrCache } = await import('../../services/url.services')
     const { generateQrCode } = await import('../../services/qr.service')
 
-    vi.mocked(resolveUrl).mockResolvedValueOnce({ url: 'https://example.com' } as any)
-    vi.mocked(generateQrCode).mockResolvedValueOnce(Buffer.from('png-data'))
+    vi.mocked(getQrCache).mockResolvedValue(null as any)
+    vi.mocked(generateQrCode).mockResolvedValue(Buffer.from('png-data'))
 
     await qrController.generateQr(req, res, next)
 
-    expect(generateQrCode).toHaveBeenCalledWith('https://example.com', 'png', undefined)
+    expect(generateQrCode).toHaveBeenCalledWith('http://localhost:3000/abc', 'png', undefined)
   })
 
-  it('passes errors to next', async () => {
-    const req = mockReq({ params: { code: 'abc' }, query: {} })
+  it('returns 410 when QR has expired', async () => {
+    setupDbRow({ qrExpiresAt: new Date('2020-01-01') })
+    const req = mockReq({ params: { code: 'abc' }, query: { format: 'png' } })
     const res = mockRes()
     const next = vi.fn()
 
-    const { resolveUrl } = await import('../../services/url.services')
-    vi.mocked(resolveUrl).mockRejectedValueOnce(new Error('not found'))
+    await qrController.generateQr(req, res, next)
+
+    expect(res.status).toHaveBeenCalledWith(410)
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'QR_CODE_EXPIRED',
+      message: expect.stringContaining('expired'),
+      expiredAt: expect.any(String),
+    })
+  })
+
+  it('returns cached QR without regenerating', async () => {
+    setupDbRow()
+    const req = mockReq({ params: { code: 'abc' }, query: { format: 'png' } })
+    const res = mockRes()
+    const next = vi.fn()
+
+    const { getQrCache } = await import('../../services/url.services')
+    const { generateQrCode } = await import('../../services/qr.service')
+
+    vi.mocked(getQrCache).mockResolvedValue({ data: Buffer.from('cached-qr').toString('base64'), createdAt: new Date() })
 
     await qrController.generateQr(req, res, next)
 
-    expect(next).toHaveBeenCalledWith(expect.any(Error))
+    expect(generateQrCode).not.toHaveBeenCalled()
+    expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'image/png')
+    expect(res.send).toHaveBeenCalledWith(expect.any(Buffer))
+  })
+
+  it('returns 404 if code does not exist', async () => {
+    const chain = mockChain()
+    chain.limit.mockResolvedValue([])
+    mockDb.select.mockReturnValue(chain)
+
+    const req = mockReq({ params: { code: 'missing' }, query: { format: 'png' } })
+    const res = mockRes()
+    const next = vi.fn()
+
+    await qrController.generateQr(req, res, next)
+
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404 }))
+  })
+
+  it('returns 404 if user does not own the URL', async () => {
+    setupDbRow({ userId: 'other-user' })
+    const req = mockReq({ params: { code: 'abc' }, query: { format: 'png' } })
+    const res = mockRes()
+    const next = vi.fn()
+
+    await qrController.generateQr(req, res, next)
+
+    expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 404 }))
   })
 })
