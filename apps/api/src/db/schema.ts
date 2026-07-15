@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm'
 import { pgTable, serial, text, timestamp, integer, index, uuid, boolean, uniqueIndex, primaryKey, jsonb, numeric, varchar } from 'drizzle-orm/pg-core'
 
 export const users = pgTable('users', {
@@ -57,6 +58,7 @@ export const urls = pgTable(
     affiliateId: text('affiliate_id'),
     affiliateNetwork: text('affiliate_network'),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    qrExpiresAt: timestamp('qr_expires_at'),
   },
   (table) => ({
     userDeletedIdx: index('urls_user_deleted_idx').on(table.userId, table.deletedAt),
@@ -284,5 +286,26 @@ export const customDomains = pgTable(
   (table) => ({
     userDomainIdx: uniqueIndex('custom_domains_user_domain_idx').on(table.userId, table.domain),
     domainIdx: uniqueIndex('custom_domains_domain_idx').on(table.domain),
+  }),
+)
+
+export const qrCodes = pgTable(
+  'qr_codes',
+  {
+    id: serial('id').primaryKey(),
+    code: text('code')
+      .notNull()
+      .references(() => urls.code, { onDelete: 'cascade' }),
+    format: text('format').notNull(),
+    logoUrl: text('logo_url'),
+    data: text('data').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => ({
+    uniqueCacheKey: uniqueIndex('qr_codes_cache_key_idx').on(
+      table.code,
+      table.format,
+      sql`COALESCE(${table.logoUrl}, '')`,
+    ),
   }),
 )

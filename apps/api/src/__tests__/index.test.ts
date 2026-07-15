@@ -40,25 +40,33 @@ vi.mock('../jobs/seedPlans', () => ({
 }))
 
 describe('Server entry point (index.ts)', () => {
+  beforeEach(() => {
+    vi.resetModules()
+    vi.clearAllMocks()
+  })
+
   it('starts the server on the configured port', async () => {
     await import('../index')
-
-    expect(mockListen).toHaveBeenCalledWith(4000, expect.any(Function))
+    await vi.waitFor(() => {
+      expect(mockListen).toHaveBeenCalledWith(4000, expect.any(Function))
+    })
   })
 
   it('logs server start message', async () => {
     await import('../index')
-
-    expect(mockLogger.info).toHaveBeenCalledWith(
-      { port: 4000 },
-      'Server started',
-    )
+    await vi.waitFor(() => {
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        { port: 4000 },
+        'Server started',
+      )
+    })
   })
 
   it('starts health check job when interval is configured', async () => {
     await import('../index')
-
-    expect(mockStartHealthCheckJob).toHaveBeenCalledWith(3600000)
+    await vi.waitFor(() => {
+      expect(mockStartHealthCheckJob).toHaveBeenCalledWith(3600000)
+    })
     expect(mockLogger.info).toHaveBeenCalledWith(
       { interval: 3600000 },
       'Health check job started',
@@ -67,7 +75,8 @@ describe('Server entry point (index.ts)', () => {
 
   it('seeds plans on startup (fire-and-forget)', async () => {
     await import('../index')
-
-    expect(mockSeedPlans).toHaveBeenCalled()
+    await vi.waitFor(() => {
+      expect(mockSeedPlans).toHaveBeenCalled()
+    })
   })
 })

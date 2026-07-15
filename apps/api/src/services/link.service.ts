@@ -9,6 +9,7 @@ import type { UpdateLinkSettingsInput } from '../validators/link.validators'
 import { logAction } from './audit.service'
 import { cacheDel, buildCacheKeyForUrl } from './cache'
 import { getUserPlan } from './subscription.service'
+import { deleteAllQrCaches } from './url.services'
 
 const LINK_CHAIN_MAX_HOPS = 5
 const JWT_SECRET = new TextEncoder().encode(env.LINK_ACCESS_SECRET)
@@ -143,11 +144,18 @@ export async function updateLinkSettings(code: string, userId: string, input: Up
   if (input.blockBots !== undefined) {
     updates.blockBots = input.blockBots
   }
+  if (input.qrExpiresAt !== undefined) {
+    updates.qrExpiresAt = input.qrExpiresAt ? new Date(input.qrExpiresAt) : null
+  }
 
   if (Object.keys(updates).length === 0) return
 
   await db.update(urls).set(updates).where(eq(urls.code, code))
   cacheDel(buildCacheKeyForUrl(code)).catch(() => {})
+
+  if (input.qrExpiresAt !== undefined) {
+    deleteAllQrCaches(code).catch(() => {})
+  }
 }
 
 export async function resolveChain(
