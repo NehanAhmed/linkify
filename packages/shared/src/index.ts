@@ -39,6 +39,7 @@ export interface ShortUrl {
   uniqueVisits: number
   expiresAt: string | null
   activeAt: string | null
+  qrExpiresAt: string | null
   hasPassword: boolean
   blockBots: boolean
   createdAt: string
@@ -208,6 +209,7 @@ export interface CreateUrlPayload {
 export interface UpdateUrlSettingsPayload {
   activeAt?: string | null
   expiresAt?: string | null
+  qrExpiresAt?: string | null
   password?: string | null
   blockBots?: boolean
 }

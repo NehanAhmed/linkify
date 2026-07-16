@@ -231,14 +231,12 @@ export async function reorderCollections(userId: string, items: ReorderCollectio
     }
   }
 
-  await db.transaction(async (tx) => {
-    for (const item of items) {
-      await tx
-        .update(collections)
-        .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
-        .where(eq(collections.id, item.id))
-    }
-  })
+  for (const item of items) {
+    await db
+      .update(collections)
+      .set({ sortOrder: item.sortOrder, updatedAt: new Date() })
+      .where(eq(collections.id, item.id))
+  }
 }
 
 export async function shareCollection(id: number, userId: string) {
