@@ -1,12 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { listUrls, listTags, listCollections, softDeleteUrl } from "@/lib/api"
-import type { ShortUrl, Tag, Collection, Pagination as PaginatedInfo } from "@linkify/shared"
+import {
+  listUrls, listTags, listCollections, softDeleteUrl,
+  bulkOperations, importCsv, bulkTagUrls, getSubscription,
+} from "@/lib/api"
+import type { ShortUrl, Tag, Collection, Pagination as PaginatedInfo, BulkResult } from "@linkify/shared"
 import { toast } from "sonner"
 import { useSearchParams, Link, useNavigate } from "react-router-dom"
 import PageHeader from "@/components/page-header"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tooltip } from "@/components/ui/tooltip"
@@ -28,6 +33,15 @@ import {
   Trash2,
   Settings,
   MoreHorizontal,
+  Tag as TagIcon,
+  Tags,
+  Folder,
+  CalendarDays,
+  FileSpreadsheet,
+  Loader2,
+  Upload,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -90,8 +104,37 @@ export default function UrlsListPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [deleteDialog, setDeleteDialog] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [hasBulkOps, setHasBulkOps] = useState(false)
+
+  // Bulk tag dialog
+  const [bulkTagOpen, setBulkTagOpen] = useState(false)
+  const [bulkTagIds, setBulkTagIds] = useState<number[]>([])
+  const [bulkTagging, setBulkTagging] = useState(false)
+
+  // Bulk move dialog
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false)
+  const [bulkMoveCollectionId, setBulkMoveCollectionId] = useState<number | "">("")
+  const [bulkMoving, setBulkMoving] = useState(false)
+
+  // Bulk extend dialog
+  const [bulkExtendOpen, setBulkExtendOpen] = useState(false)
+  const [bulkExtendDays, setBulkExtendDays] = useState(30)
+  const [bulkExtending, setBulkExtending] = useState(false)
+
+  // Bulk delete dialog
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+
+  // CSV import
+  const [csvOpen, setCsvOpen] = useState(false)
+  const [csvText, setCsvText] = useState("")
+  const [csvCollectionId, setCsvCollectionId] = useState<number | "">("")
+  const [csvResults, setCsvResults] = useState<BulkResult[] | null>(null)
+  const [csvImporting, setCsvImporting] = useState(false)
 
   const totalActiveFilters = [filters.tagIds, filters.collectionId, filters.createdAfter, filters.createdBefore, filters.hasPassword, filters.isActive].filter(Boolean).length
+
+  const abortRef = useRef<AbortController | null>(null)
 
   async function fetchAllPages<T>(
     fetcher: (page: number) => Promise<{ items: T[]; pagination: PaginatedInfo }>,
@@ -106,8 +149,6 @@ export default function UrlsListPage() {
     return all
   }
 
-  const abortRef = useRef<AbortController | null>(null)
-
   const fetchData = useCallback(async () => {
     if (!token) return
     abortRef.current?.abort()
@@ -119,16 +160,18 @@ export default function UrlsListPage() {
       for (const [key, val] of Object.entries(filters)) {
         if (val) params.set(key, val)
       }
-      const [urlsData, tagsData, collectionsData] = await Promise.all([
+      const [urlsData, tagsData, collectionsData, subData] = await Promise.all([
         listUrls(token, Object.fromEntries(params)),
         fetchAllPages((page) => listTags(token, { page }).then((d) => ({ items: d.tags, pagination: d.pagination }))).catch(() => [] as Tag[]),
         fetchAllPages((page) => listCollections(token, { page }).then((d) => ({ items: d.collections, pagination: d.pagination }))).catch(() => [] as Collection[]),
+        getSubscription(token).catch(() => null),
       ])
       if (!controller.signal.aborted) {
         setUrls(urlsData.urls)
         setPagination(urlsData.pagination)
         setTags(tagsData)
         setCollections(collectionsData)
+        setHasBulkOps(subData?.plan?.features?.bulkOperations ?? false)
       }
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === "AbortError") return
@@ -203,6 +246,115 @@ export default function UrlsListPage() {
     }
   }
 
+  // Bulk operations
+  const handleBulkTag = async () => {
+    if (bulkTagIds.length === 0) { toast.error("Select at least one tag"); return }
+    setBulkTagging(true)
+    try {
+      const results = await bulkTagUrls(token, Array.from(selected), bulkTagIds)
+      const ok = results.filter((r) => r.success).length
+      toast.success(`${ok} of ${results.length} tagged successfully`)
+      setBulkTagOpen(false)
+      setBulkTagIds([])
+      setSelected(new Set())
+      fetchData()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to tag URLs"
+      toast.error(msg)
+    } finally {
+      setBulkTagging(false)
+    }
+  }
+
+  const handleBulkMove = async () => {
+    if (bulkMoveCollectionId === "") { toast.error("Select a collection"); return }
+    setBulkMoving(true)
+    try {
+      const results = await bulkOperations(token, {
+        operation: "move",
+        codes: Array.from(selected),
+        collectionId: Number(bulkMoveCollectionId),
+      })
+      const ok = results.filter((r) => r.success).length
+      toast.success(`${ok} of ${results.length} moved successfully`)
+      setBulkMoveOpen(false)
+      setBulkMoveCollectionId("")
+      setSelected(new Set())
+      fetchData()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to move URLs"
+      toast.error(msg)
+    } finally {
+      setBulkMoving(false)
+    }
+  }
+
+  const handleBulkExtend = async () => {
+    if (bulkExtendDays < 1 || bulkExtendDays > 365) { toast.error("Days must be between 1 and 365"); return }
+    setBulkExtending(true)
+    try {
+      const results = await bulkOperations(token, {
+        operation: "extend",
+        codes: Array.from(selected),
+        extendDays: bulkExtendDays,
+      })
+      const ok = results.filter((r) => r.success).length
+      toast.success(`${ok} of ${results.length} extended successfully`)
+      setBulkExtendOpen(false)
+      setSelected(new Set())
+      fetchData()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to extend URLs"
+      toast.error(msg)
+    } finally {
+      setBulkExtending(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    setBulkDeleting(true)
+    try {
+      const results = await bulkOperations(token, {
+        operation: "delete",
+        codes: Array.from(selected),
+      })
+      const ok = results.filter((r) => r.success).length
+      toast.success(`${ok} of ${results.length} deleted successfully`)
+      setBulkDeleteOpen(false)
+      setSelected(new Set())
+      fetchData()
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to delete URLs"
+      toast.error(msg)
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  // CSV import
+  const handleCsvImport = async () => {
+    if (!csvText.trim()) { toast.error("Paste CSV content first"); return }
+    setCsvImporting(true)
+    setCsvResults(null)
+    try {
+      const results = await importCsv(
+        token,
+        csvText.trim(),
+        csvCollectionId !== "" ? Number(csvCollectionId) : undefined,
+      )
+      setCsvResults(results)
+      const ok = results.filter((r) => r.success).length
+      toast.success(`${ok} of ${results.length} URLs created successfully`)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to import CSV"
+      toast.error(msg)
+    } finally {
+      setCsvImporting(false)
+    }
+  }
+
+  const selectedArray = Array.from(selected)
+
   const SortIcon = ({ column }: { column: string }) => {
     if (filters.sortBy !== column) return <ChevronsUpDown className="ml-1 h-3 w-3 text-muted-foreground" />
     return filters.sortOrder === "asc" ? (
@@ -213,12 +365,16 @@ export default function UrlsListPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-16">
       <PageHeader
         title="URLs"
         description="Manage your short links"
         actions={
           <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}>
+              <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+              Import CSV
+            </Button>
             <Link to="/urls/new">
               <Button size="sm">Create URL</Button>
             </Link>
@@ -508,7 +664,49 @@ export default function UrlsListPage() {
         </div>
       )}
 
-      {/* Delete Dialog */}
+      {/* Bulk Action Toolbar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="tabular-nums">
+                {selected.size} selected
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                Clear
+              </Button>
+            </div>
+            {hasBulkOps ? (
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setBulkTagOpen(true)}>
+                  <Tags className="mr-1.5 h-4 w-4" />Tag
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setBulkMoveOpen(true)}>
+                  <Folder className="mr-1.5 h-4 w-4" />Move
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setBulkExtendOpen(true)}>
+                  <CalendarDays className="mr-1.5 h-4 w-4" />Extend
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+                  <Trash2 className="mr-1.5 h-4 w-4" />Delete
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Badge variant="default" className="text-[10px]">Pro</Badge>
+                <span className="text-sm text-muted-foreground">
+                  Bulk operations require Pro plan
+                </span>
+                <Link to="/billing/plans">
+                  <Button size="sm" variant="primary">Upgrade</Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Single Delete Dialog */}
       <Dialog open={!!deleteDialog} onClose={() => setDeleteDialog(null)}>
         <DialogHeader>
           <DialogTitle>Delete URL</DialogTitle>
@@ -521,13 +719,236 @@ export default function UrlsListPage() {
           <Button variant="outline" onClick={() => setDeleteDialog(null)} disabled={deleting}>
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            onClick={() => deleteDialog && handleDelete(deleteDialog)}
-            disabled={deleting}
-          >
+          <Button variant="destructive" onClick={() => deleteDialog && handleDelete(deleteDialog)} disabled={deleting}>
             {deleting ? "Deleting..." : "Delete"}
           </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Bulk Tag Dialog */}
+      <Dialog open={bulkTagOpen} onClose={() => { setBulkTagOpen(false); setBulkTagIds([]) }}>
+        <DialogHeader>
+          <DialogTitle>Tag {selected.size} URLs</DialogTitle>
+          <DialogDescription>Select tags to apply to all selected URLs.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2 px-6 pb-2 max-h-60 overflow-y-auto">
+          {tags.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No tags yet. Create one first.</p>
+          ) : (
+            tags.map((tag) => (
+              <label key={tag.id} className="flex items-center gap-2 cursor-pointer py-1">
+                <input
+                  type="checkbox"
+                  checked={bulkTagIds.includes(tag.id)}
+                  onChange={() => {
+                    setBulkTagIds((prev) =>
+                      prev.includes(tag.id)
+                        ? prev.filter((id) => id !== tag.id)
+                        : [...prev, tag.id]
+                    )
+                  }}
+                  className="h-4 w-4 rounded border-border"
+                />
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                <span className="text-sm text-foreground">{tag.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setBulkTagOpen(false); setBulkTagIds([]) }} disabled={bulkTagging}>
+            Cancel
+          </Button>
+          <Button onClick={handleBulkTag} disabled={bulkTagging || bulkTagIds.length === 0}>
+            {bulkTagging ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <TagIcon className="mr-1.5 h-4 w-4" />}
+            {bulkTagging ? "Tagging..." : `Tag ${selected.size} URLs`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Bulk Move Dialog */}
+      <Dialog open={bulkMoveOpen} onClose={() => { setBulkMoveOpen(false); setBulkMoveCollectionId("") }}>
+        <DialogHeader>
+          <DialogTitle>Move {selected.size} URLs</DialogTitle>
+          <DialogDescription>Select a collection to move URLs into.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 px-6 pb-2">
+          <Label htmlFor="bulk-move-collection">Collection</Label>
+          <select
+            id="bulk-move-collection"
+            value={bulkMoveCollectionId}
+            onChange={(e) => setBulkMoveCollectionId(e.target.value ? Number(e.target.value) : "")}
+            className="flex h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            <option value="">Select a collection</option>
+            {collections.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setBulkMoveOpen(false); setBulkMoveCollectionId("") }} disabled={bulkMoving}>
+            Cancel
+          </Button>
+          <Button onClick={handleBulkMove} disabled={bulkMoving || bulkMoveCollectionId === ""}>
+            {bulkMoving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Folder className="mr-1.5 h-4 w-4" />}
+            {bulkMoving ? "Moving..." : `Move ${selected.size} URLs`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Bulk Extend Dialog */}
+      <Dialog open={bulkExtendOpen} onClose={() => { setBulkExtendOpen(false); setBulkExtendDays(30) }}>
+        <DialogHeader>
+          <DialogTitle>Extend {selected.size} URLs</DialogTitle>
+          <DialogDescription>Extend the expiry date by a number of days.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5 px-6 pb-2">
+          <Label htmlFor="bulk-extend-days">Days to extend (1–365)</Label>
+          <div className="flex gap-2">
+            {[7, 30, 60, 90, 365].map((d) => (
+              <Button
+                key={d}
+                variant={bulkExtendDays === d ? "primary" : "outline"}
+                size="sm"
+                onClick={() => setBulkExtendDays(d)}
+              >
+                {d}d
+              </Button>
+            ))}
+          </div>
+          <Input
+            id="bulk-extend-days"
+            type="number"
+            min={1}
+            max={365}
+            value={bulkExtendDays}
+            onChange={(e) => setBulkExtendDays(Math.min(365, Math.max(1, Number(e.target.value))))}
+            className="mt-2"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => { setBulkExtendOpen(false); setBulkExtendDays(30) }} disabled={bulkExtending}>
+            Cancel
+          </Button>
+          <Button onClick={handleBulkExtend} disabled={bulkExtending || bulkExtendDays < 1 || bulkExtendDays > 365}>
+            {bulkExtending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <CalendarDays className="mr-1.5 h-4 w-4" />}
+            {bulkExtending ? "Extending..." : `Extend ${selected.size} URLs`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={bulkDeleteOpen} onClose={() => setBulkDeleteOpen(false)}>
+        <DialogHeader>
+          <DialogTitle>Delete {selected.size} URLs</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to delete these {selected.size} URLs? They will no longer be accessible.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={bulkDeleting}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+            {bulkDeleting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
+            {bulkDeleting ? "Deleting..." : `Delete ${selected.size} URLs`}
+          </Button>
+        </DialogFooter>
+      </Dialog>
+
+      {/* CSV Import Dialog */}
+      <Dialog
+        open={csvOpen}
+        onClose={() => { setCsvOpen(false); setCsvText(""); setCsvResults(null); setCsvCollectionId("") }}
+      >
+        <DialogHeader>
+          <DialogTitle>Import CSV</DialogTitle>
+          <DialogDescription>
+            Paste CSV content to create multiple URLs at once.
+            <br />
+            Columns: <span className="font-mono text-xs">url</span> (required),{" "}
+            <span className="font-mono text-xs">customCode</span>,{" "}
+            <span className="font-mono text-xs">ttlDays</span>,{" "}
+            <span className="font-mono text-xs">password</span>,{" "}
+            <span className="font-mono text-xs">activeAt</span>,{" "}
+            <span className="font-mono text-xs">tags</span>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 px-6 pb-2">
+          {!csvResults ? (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="csv-text">CSV Content</Label>
+                <Textarea
+                  id="csv-text"
+                  value={csvText}
+                  onChange={(e) => setCsvText(e.target.value)}
+                  placeholder={`url,customCode,ttlDays\nhttps://example.com,my-link,30`}
+                  rows={8}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="csv-collection">Collection (optional)</Label>
+                <select
+                  id="csv-collection"
+                  value={csvCollectionId}
+                  onChange={(e) => setCsvCollectionId(e.target.value ? Number(e.target.value) : "")}
+                  className="flex h-9 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                >
+                  <option value="">None</option>
+                  {collections.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <span className="text-foreground">
+                  {csvResults.filter((r) => r.success).length} of {csvResults.length} URLs created
+                </span>
+              </div>
+              <div className="max-h-48 space-y-1 overflow-y-auto">
+                {csvResults.map((r, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs">
+                    {r.success ? (
+                      <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-500" />
+                    ) : (
+                      <XCircle className="h-3.5 w-3.5 shrink-0 text-destructive" />
+                    )}
+                    <span className="font-mono">{r.code ?? `row ${(r.index ?? 0) + 1}`}</span>
+                    {!r.success && r.error && (
+                      <span className="text-muted-foreground">— {r.error}</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          {!csvResults ? (
+            <>
+              <Button variant="outline" onClick={() => { setCsvOpen(false); setCsvText(""); setCsvCollectionId("") }} disabled={csvImporting}>
+                Cancel
+              </Button>
+              <Button onClick={handleCsvImport} disabled={csvImporting || !csvText.trim()}>
+                {csvImporting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Upload className="mr-1.5 h-4 w-4" />}
+                {csvImporting ? "Importing..." : "Import"}
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => { setCsvOpen(false); setCsvText(""); setCsvResults(null); setCsvCollectionId("") }}
+            >
+              Done
+            </Button>
+          )}
         </DialogFooter>
       </Dialog>
     </div>
