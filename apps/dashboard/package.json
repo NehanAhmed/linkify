@@ -11,8 +11,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@linkify/shared": "workspace:*",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
     "@fontsource-variable/geist": "^5.2.9",
+    "@linkify/shared": "workspace:*",
     "@supabase/supabase-js": "^2.110.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
