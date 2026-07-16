@@ -31,6 +31,7 @@ const envSchema = z.object({
   BILLING_SUCCESS_URL: z.string().optional(),
   BILLING_CANCEL_URL: z.string().optional(),
   BILLING_RETURN_URL: z.string().optional(),
+  APP_URL: z.string().default('http://localhost:5173'),
 
   // Feature flags
   FEATURE_BULK_OPERATIONS: z.enum(['enabled', 'disabled']).default('enabled'),

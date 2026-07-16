@@ -247,7 +247,7 @@ export function removeUrlPassword(token: string, code: string) {
 
 export function verifyUrlPassword(code: string, password: string) {
   return request<{ token: string }>(
-    `/api/urls/${code}/verify-password`,
+    `/api/urls/${code}/verify-password-token`,
     {
       method: "POST",
       body: JSON.stringify({ password }),
