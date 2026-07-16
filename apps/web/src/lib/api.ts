@@ -48,4 +48,14 @@ export function fetchMe(token: string) {
   )
 }
 
+export function verifyUrlPassword(code: string, password: string) {
+  return request<{ token: string }>(
+    `/api/urls/${code}/verify-password-token`,
+    {
+      method: "POST",
+      body: JSON.stringify({ password }),
+    }
+  )
+}
+
 

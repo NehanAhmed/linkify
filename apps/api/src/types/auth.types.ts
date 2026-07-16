@@ -6,6 +6,7 @@ export interface AuthenticatedUser {
   role: UserRole
   aal?: 'aal1' | 'aal2'
   apiKeyName?: string
+  scopes?: string[]
 }
 
 declare global {

@@ -12,6 +12,7 @@ import { AppError } from '../utils/AppError'
 import { logActionFromReq } from '../services/audit.service'
 import { isBot } from '../utils/botDetection'
 import { logger } from '../utils/logger'
+import { env } from '../utils/env'
 import { db } from '../db'
 import { visits } from '../db/schema'
 import { count, eq, asc } from 'drizzle-orm'
@@ -203,6 +204,12 @@ async function performRedirect(code: string, req: Request, res: Response) {
   if (url.passwordHash) {
     const token = req.query.token as string | undefined
     if (!token) {
+      const accept = req.headers.accept ?? ''
+      const acceptsHtml = accept.includes('text/html')
+      if (acceptsHtml) {
+        res.redirect(302, `${env.APP_URL}/link/${code}`)
+        return
+      }
       res.status(401).json({
         success: false,
         error: 'This link is password protected. POST /:code/verify-password to get an access token.',

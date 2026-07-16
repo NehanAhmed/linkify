@@ -63,7 +63,7 @@ async function verifyApiKey(token: string, ip?: string): Promise<AuthenticatedUs
       .catch(() => {})
 
     const role = await syncUser(key.userId)
-    return { id: key.userId, role: role as UserRole, apiKeyName: key.name }
+    return { id: key.userId, role: role as UserRole, apiKeyName: key.name, scopes: key.scopes ?? undefined }
   }
 
   throw new AppError('Invalid API key', 401, 'AUTH_INVALID_KEY')
