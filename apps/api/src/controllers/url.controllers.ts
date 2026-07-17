@@ -16,6 +16,7 @@ import { env } from '../utils/env'
 import { db } from '../db'
 import { visits } from '../db/schema'
 import { count, eq, asc } from 'drizzle-orm'
+import { isFeatureEnabled, FeatureFlag } from '../utils/featureFlags'
 
 export async function createUrl(req: Request, res: Response, next: NextFunction) {
   try {
@@ -29,6 +30,9 @@ export async function createUrl(req: Request, res: Response, next: NextFunction)
 
 export async function createUrlBulk(req: Request, res: Response, next: NextFunction) {
   try {
+    if (!isFeatureEnabled(FeatureFlag.BulkOperations)) {
+      throw new AppError('Bulk operations are not available', 403, 'FEATURE_NOT_AVAILABLE')
+    }
     const input = createUrlBulkSchema.parse(req.body)
     const results = await urlService.createShortUrlBulk(input, req.user!.id)
     const hasError = results.some((r) => !r.success)

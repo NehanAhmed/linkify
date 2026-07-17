@@ -17,6 +17,7 @@ import { createFingerprint } from '../utils/fingerprint'
 import { encrypt, decrypt } from '../utils/encryption'
 import { cacheGet, cacheSet, cacheDel, buildCacheKeyForUrl } from './cache'
 import { getUserPlan } from './subscription.service'
+import { isFeatureEnabled, FeatureFlag } from '../utils/featureFlags'
 
 const BASE_URL = env.BASE_URL
 const UNIQUE_VISIT_WINDOW_HOURS = env.UNIQUE_VISIT_WINDOW_HOURS
@@ -99,6 +100,11 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
     : null
 
   const activeAt = input.activeAt ? new Date(input.activeAt) : null
+
+  if ((activeAt || expiresAt) && !isFeatureEnabled(FeatureFlag.ScheduledLinks)) {
+    throw new AppError('Scheduled links are not available', 403, 'FEATURE_NOT_AVAILABLE')
+  }
+
   const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
   const blockBots = input.blockBots ?? false
   const qrExpiresAt = input.qrExpiresAt ? new Date(input.qrExpiresAt) : null

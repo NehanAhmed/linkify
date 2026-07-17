@@ -277,7 +277,7 @@ src/
 │   └── url.types.ts             # Request/response interfaces (UrlResponse, VisitResponse, etc.)
 │
 ├── constants/
-│   ├── blockedDomains.ts        # Blocklist TLDs and phishing URL patterns
+│   ├── blocklistDomains.ts        # Blocklist TLDs and phishing URL patterns
 │   └── reservedWords.ts         # Reserved short codes (api, admin, dashboard, etc.)
 │
 ├── utils/

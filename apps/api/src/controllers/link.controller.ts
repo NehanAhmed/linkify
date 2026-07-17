@@ -11,6 +11,8 @@ import * as linkService from '../services/link.service'
 import * as bulkService from '../services/bulk.service'
 import { logActionFromReq } from '../services/audit.service'
 import { logger } from '../utils/logger'
+import { isFeatureEnabled, FeatureFlag } from '../utils/featureFlags'
+import { AppError } from '../utils/AppError'
 
 export async function setPassword(req: Request, res: Response, next: NextFunction) {
   try {
@@ -57,6 +59,9 @@ export async function updateLinkSettings(req: Request, res: Response, next: Next
 
 export async function executeBulkOperation(req: Request, res: Response, next: NextFunction) {
   try {
+    if (!isFeatureEnabled(FeatureFlag.BulkOperations)) {
+      throw new AppError('Bulk operations are not available', 403, 'FEATURE_NOT_AVAILABLE')
+    }
     const input = bulkOperationSchema.parse(req.body)
     const results = await bulkService.executeBulkOperation(req.user!.id, input)
     logActionFromReq(req, 'url.bulk_operation', 'url', undefined, {
@@ -75,6 +80,9 @@ export async function executeBulkOperation(req: Request, res: Response, next: Ne
 
 export async function importCsv(req: Request, res: Response, next: NextFunction) {
   try {
+    if (!isFeatureEnabled(FeatureFlag.BulkOperations)) {
+      throw new AppError('Bulk operations are not available', 403, 'FEATURE_NOT_AVAILABLE')
+    }
     const input = csvImportSchema.parse(req.body)
     const results = await bulkService.importCsv(input, req.user!.id)
     logActionFromReq(req, 'url.csv_imported', 'url', undefined, {

@@ -2,8 +2,11 @@ import { Router } from 'express'
 import * as authController from '../controllers/auth.controller'
 import { requireAuth } from '../middleware/auth'
 import { authLimiter } from '../middleware/rateLimiter'
+import { csrfTokenHandler } from '../middleware/csrf'
 
 const router = Router()
+
+router.get('/csrf-token', authLimiter, csrfTokenHandler)
 
 router.post('/refresh', authLimiter, authController.refreshToken)
 router.post('/reset-password', authLimiter, authController.resetPassword)
