@@ -41,6 +41,7 @@ export interface ShortUrl {
   activeAt: string | null
   qrExpiresAt: string | null
   hasPassword: boolean
+  passwordSetAt: string | null
   blockBots: boolean
   createdAt: string
 }
@@ -201,6 +202,7 @@ export interface CreateUrlPayload {
   ttlDays?: number
   password?: string
   activeAt?: string
+  qrExpiresAt?: string | null
   blockBots?: boolean
   tags?: string[]
   collectionId?: number

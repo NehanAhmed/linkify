@@ -42,6 +42,7 @@ import {
   Upload,
   CheckCircle2,
   XCircle,
+  Table as TableIcon,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -131,6 +132,15 @@ export default function UrlsListPage() {
   const [csvCollectionId, setCsvCollectionId] = useState<number | "">("")
   const [csvResults, setCsvResults] = useState<BulkResult[] | null>(null)
   const [csvImporting, setCsvImporting] = useState(false)
+
+  const csvPreview = (() => {
+    if (!csvText.trim() || csvResults) return null
+    const lines = csvText.trim().split("\n")
+    if (lines.length < 2) return null
+    const headers = lines[0].split(",").map((h) => h.trim())
+    const dataRows = lines.slice(1).filter(Boolean)
+    return { headers, totalRows: dataRows.length }
+  })()
 
   const totalActiveFilters = [filters.tagIds, filters.collectionId, filters.createdAfter, filters.createdBefore, filters.hasPassword, filters.isActive].filter(Boolean).length
 
@@ -889,6 +899,21 @@ export default function UrlsListPage() {
                   className="font-mono text-xs"
                 />
               </div>
+              {csvPreview && (
+                <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
+                  <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <TableIcon className="h-3.5 w-3.5" />
+                    <span>Preview — {csvPreview.totalRows} data {csvPreview.totalRows === 1 ? "row" : "rows"}, {csvPreview.headers.length} columns</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {csvPreview.headers.map((header, i) => (
+                      <span key={i} className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                        {header}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="csv-collection">Collection (optional)</Label>
                 <select

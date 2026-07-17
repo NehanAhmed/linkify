@@ -40,6 +40,8 @@ interface FormState {
   password: string
   activeAt: string
   activeTime: string
+  qrExpiresAt: string
+  qrExpiresTime: string
   blockBots: boolean
   tags: string[]
   collectionId: string
@@ -52,6 +54,8 @@ const initialForm: FormState = {
   password: "",
   activeAt: "",
   activeTime: "",
+  qrExpiresAt: "",
+  qrExpiresTime: "",
   blockBots: false,
   tags: [],
   collectionId: "",
@@ -143,12 +147,19 @@ export default function CreateUrlPage() {
         activeAt = new Date(dateStr).toISOString()
       }
 
+      let qrExpiresAt: string | undefined | null
+      if (form.qrExpiresAt) {
+        const dateStr = form.qrExpiresTime ? `${form.qrExpiresAt}T${form.qrExpiresTime}:00` : `${form.qrExpiresAt}T00:00:00`
+        qrExpiresAt = new Date(dateStr).toISOString()
+      }
+
       const result = await createUrl(token, {
         url: normalizeUrl(form.url),
         customCode: form.customCode || undefined,
         ttlDays: form.ttlDays ? Number(form.ttlDays) : undefined,
         password: form.password || undefined,
         activeAt,
+        qrExpiresAt,
         blockBots: form.blockBots,
         tags: form.tags.length > 0 ? form.tags : undefined,
         collectionId: form.collectionId ? Number(form.collectionId) : undefined,
@@ -314,6 +325,28 @@ export default function CreateUrlPage() {
                   type="time"
                   value={form.activeTime}
                   onChange={(e) => updateField("activeTime", e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* QR Expires at */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="qrExpiresAt">QR code expires at (optional)</Label>
+                <Input
+                  id="qrExpiresAt"
+                  type="date"
+                  value={form.qrExpiresAt}
+                  onChange={(e) => updateField("qrExpiresAt", e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qrExpiresTime">Time (optional)</Label>
+                <Input
+                  id="qrExpiresTime"
+                  type="time"
+                  value={form.qrExpiresTime}
+                  onChange={(e) => updateField("qrExpiresTime", e.target.value)}
                 />
               </div>
             </div>

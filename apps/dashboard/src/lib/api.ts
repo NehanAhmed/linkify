@@ -213,6 +213,17 @@ export function generateQrCode(code: string, format: "png" | "svg" = "png", logo
   return requestBlob(`/api/urls/${code}/qr?${searchParams.toString()}`, { signal })
 }
 
+export function regenerateQrCode(token: string, code: string, expiresAt?: string | null) {
+  return request<{ message: string }>(
+    `/api/urls/${code}/qr/regenerate`,
+    {
+      method: "POST",
+      headers: setAuthHeader(token),
+      body: JSON.stringify({ expiresAt: expiresAt ?? undefined }),
+    }
+  )
+}
+
 export function updateUrlSettings(token: string, code: string, payload: UpdateUrlSettingsPayload) {
   return request<{ message: string }>(
     `/api/urls/${code}/settings`,

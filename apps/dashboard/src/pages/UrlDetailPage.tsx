@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useAuth } from "@/hooks/use-auth"
-import { getUrlInfo, getUrlVisits, getUrlStats, exportVisitsCsv, generateQrCode, softDeleteUrl } from "@/lib/api"
+import { getUrlInfo, getUrlVisits, getUrlStats, exportVisitsCsv, generateQrCode, regenerateQrCode, softDeleteUrl } from "@/lib/api"
 import type { ShortUrl, Visit, VisitStats, Pagination as PaginatedInfo } from "@linkify/shared"
 import { toast } from "sonner"
 import { useParams, useNavigate, Link } from "react-router-dom"
@@ -98,6 +98,7 @@ export default function UrlDetailPage() {
   const [qrLogo, setQrLogo] = useState("")
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [qrResultFormat, setQrResultFormat] = useState<"png" | "svg">("png")
+  const [regeneratingQr, setRegeneratingQr] = useState(false)
   const [deleteDialog, setDeleteDialog] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [showTotal, setShowTotal] = useState(true)
@@ -201,6 +202,24 @@ export default function UrlDetailPage() {
       setQrLoading(false)
     }
   }
+
+  const handleRegenerateQr = async () => {
+    if (!code) return
+    setRegeneratingQr(true)
+    try {
+      await regenerateQrCode(token, code)
+      toast.success("QR code regenerated")
+      const info = await getUrlInfo(token, code)
+      setUrlInfo(info)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to regenerate QR code"
+      toast.error(msg)
+    } finally {
+      setRegeneratingQr(false)
+    }
+  }
+
+  const isQrExpired = urlInfo?.qrExpiresAt ? new Date(urlInfo.qrExpiresAt) < new Date() : false
 
   const handleDelete = async () => {
     if (!code) return
@@ -596,7 +615,14 @@ export default function UrlDetailPage() {
         <TabsContent value="qr">
           <Card>
             <CardHeader>
-              <CardTitle>QR Code</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>QR Code</CardTitle>
+                {urlInfo.qrExpiresAt && (
+                  <Badge variant={isQrExpired ? "destructive" : "secondary"}>
+                    {isQrExpired ? "Expired" : `Expires ${format(new Date(urlInfo.qrExpiresAt), "MMM d, yyyy")}`}
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
@@ -624,14 +650,26 @@ export default function UrlDetailPage() {
                 </div>
               </div>
 
-              <Button onClick={handleGenerateQr} disabled={qrLoading}>
-                {qrLoading ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                  <QrCode className="mr-1.5 h-4 w-4" />
+              <div className="flex gap-2">
+                <Button onClick={handleGenerateQr} disabled={qrLoading}>
+                  {qrLoading ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <QrCode className="mr-1.5 h-4 w-4" />
+                  )}
+                  {qrLoading ? "Generating..." : "Generate QR Code"}
+                </Button>
+                {isQrExpired && (
+                  <Button variant="outline" onClick={handleRegenerateQr} disabled={regeneratingQr}>
+                    {regeneratingQr ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <QrCode className="mr-1.5 h-4 w-4" />
+                    )}
+                    {regeneratingQr ? "Regenerating..." : "Regenerate QR"}
+                  </Button>
                 )}
-                {qrLoading ? "Generating..." : "Generate QR Code"}
-              </Button>
+              </div>
 
               {qrDataUrl && (
                 <div className="flex flex-col items-center gap-4 rounded-lg border border-border p-6">

@@ -37,18 +37,28 @@ export default function BulkCreatePage() {
   const [loading, setLoading] = useState(false)
   const [results, setResults] = useState<BulkResult[] | null>(null)
 
+  interface ParsedLine {
+    original: string
+    url: string
+    customCode?: string
+    valid: boolean
+  }
+
   const urls = input
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean)
 
-  const validUrls = urls.map((url) => {
+  const validUrls: ParsedLine[] = urls.map((line) => {
+    const parts = line.split("|").map((s) => s.trim())
+    const rawUrl = parts[0]
+    const customCode = parts.length > 1 ? parts[1] : undefined
     try {
-      const fullUrl = url.startsWith("http") ? url : `https://${url}`
+      const fullUrl = rawUrl.startsWith("http") ? rawUrl : `https://${rawUrl}`
       new URL(fullUrl)
-      return { original: url, url: fullUrl, valid: true }
+      return { original: line, url: fullUrl, customCode, valid: true }
     } catch {
-      return { original: url, url: "", valid: false }
+      return { original: line, url: "", valid: false }
     }
   })
 
@@ -68,7 +78,10 @@ export default function BulkCreatePage() {
 
     setLoading(true)
     try {
-      const payload = validUrls.filter((u) => u.valid).map((u) => ({ url: u.url }))
+      const payload = validUrls.filter((u) => u.valid).map((u) => ({
+        url: u.url,
+        ...(u.customCode ? { customCode: u.customCode } : {}),
+      }))
       const data = await bulkCreateUrls(token, payload)
       setResults(data)
       const successCount = data.filter((r) => r.success).length
@@ -105,9 +118,12 @@ export default function BulkCreatePage() {
           <CardContent className="p-6 space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="urls">Enter URLs (one per line)</Label>
+              <p className="text-xs text-muted-foreground">
+                Optionally append <span className="font-mono">|customCode</span> per line to set a custom short code.
+              </p>
               <Textarea
                 id="urls"
-                placeholder={`https://example.com/page1\nhttps://example.com/page2\nhttps://example.com/page3`}
+                placeholder={`https://example.com/page1\nhttps://example.com/page2|custom-code\nhttps://example.com/page3`}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 className="min-h-[200px] font-mono text-sm"

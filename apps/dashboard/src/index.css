@@ -1,11 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/sora";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --font-sans: "Geist Variable", sans-serif;
+  --font-display: "Sora Variable", sans-serif;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -85,5 +87,9 @@
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
   }
 }

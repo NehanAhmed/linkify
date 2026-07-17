@@ -7,6 +7,8 @@ import {
   getCollectionUrls,
   addUrlToCollection,
   removeUrlFromCollection,
+  shareCollection,
+  revokeCollectionShare,
   listUrls,
   ApiError,
 } from "@/lib/api"
@@ -33,6 +35,8 @@ import {
   List,
   ExternalLink,
   Check,
+  Share2,
+  Globe,
 } from "lucide-react"
 
 function getAddErrorMsg(err: unknown): string {
@@ -77,6 +81,10 @@ export default function CollectionDetailPage() {
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set())
   const [addingSelected, setAddingSelected] = useState(false)
   const [selectSearch, setSelectSearch] = useState("")
+
+  const [sharing, setSharing] = useState(false)
+  const [revoking, setRevoking] = useState(false)
+  const [copiedShare, setCopiedShare] = useState(false)
 
   const fetchCollection = useCallback(async () => {
     if (!token || !collectionId) return
@@ -231,6 +239,47 @@ export default function CollectionDetailPage() {
     }
   }
 
+  const handleShare = async () => {
+    setSharing(true)
+    try {
+      const data = await shareCollection(token, collectionId)
+      setCollection((prev) => prev ? { ...prev, shareToken: data.shareToken, sharedAt: new Date().toISOString() } : null)
+      toast.success("Share link generated")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to generate share link"
+      toast.error(msg)
+    } finally {
+      setSharing(false)
+    }
+  }
+
+  const handleRevokeShare = async () => {
+    setRevoking(true)
+    try {
+      await revokeCollectionShare(token, collectionId)
+      setCollection((prev) => prev ? { ...prev, shareToken: null, sharedAt: null } : null)
+      toast.success("Share link revoked")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to revoke share link"
+      toast.error(msg)
+    } finally {
+      setRevoking(false)
+    }
+  }
+
+  const handleCopyShare = async () => {
+    if (!collection?.shareToken) return
+    const shareUrl = `${window.location.origin}/collections/shared/${collection.shareToken}`
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopiedShare(true)
+      setTimeout(() => setCopiedShare(false), 2000)
+      toast.success("Share URL copied")
+    } catch {
+      toast.error("Failed to copy")
+    }
+  }
+
   const toggleSelect = (code: string) => {
     setSelectedCodes((prev) => {
       const next = new Set(prev)
@@ -371,6 +420,56 @@ export default function CollectionDetailPage() {
                 onPageChange={(p) => fetchUrls(p)}
               />
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Share Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Share Collection</CardTitle>
+          <CardDescription>Generate a shareable link for this collection.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {collection.shareToken ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+                <Globe className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="flex-1 truncate text-sm font-mono text-foreground">
+                  {`${window.location.origin}/collections/shared/${collection.shareToken}`}
+                </span>
+                <Button variant="outline" size="sm" className="shrink-0 h-8 gap-1.5" onClick={handleCopyShare}>
+                  {copiedShare ? (
+                    <Check className="h-3.5 w-3.5 text-emerald-500" />
+                  ) : (
+                    <Globe className="h-3.5 w-3.5" />
+                  )}
+                  {copiedShare ? "Copied" : "Copy"}
+                </Button>
+              </div>
+              {collection.sharedAt && (
+                <p className="text-xs text-muted-foreground">
+                  Shared {format(new Date(collection.sharedAt), "MMM d, yyyy HH:mm")}
+                </p>
+              )}
+              <Button variant="outline" size="sm" onClick={handleRevokeShare} disabled={revoking}>
+                {revoking ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                )}
+                {revoking ? "Revoking..." : "Revoke Share"}
+              </Button>
+            </div>
+          ) : (
+            <Button size="sm" onClick={handleShare} disabled={sharing}>
+              {sharing ? (
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              ) : (
+                <Share2 className="mr-1.5 h-4 w-4" />
+              )}
+              {sharing ? "Generating..." : "Generate Share Link"}
+            </Button>
           )}
         </CardContent>
       </Card>

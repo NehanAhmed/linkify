@@ -1,11 +1,14 @@
-import { useState } from "react"
+import { useState, useRef, useCallback } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Copy, Check, Link2, Loader2 } from "lucide-react"
+import { Clock, Copy, Check, Link2, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import type { ShortUrl } from "@linkify/shared"
+
+const RATE_LIMIT = 10
+const RATE_WINDOW_MS = 60000
 
 interface QuickCreateFormProps {
   onShorten: (url: string) => Promise<ShortUrl>
@@ -16,6 +19,26 @@ export default function QuickCreateForm({ onShorten }: QuickCreateFormProps) {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ShortUrl | null>(null)
   const [copied, setCopied] = useState(false)
+  const [rateCount, setRateCount] = useState(0)
+  const timestampsRef = useRef<number[]>([])
+
+  const isRateLimited = rateCount >= RATE_LIMIT
+
+  const recordRequest = useCallback(() => {
+    const now = Date.now()
+    const windowStart = now - RATE_WINDOW_MS
+    timestampsRef.current = timestampsRef.current.filter((t) => t > windowStart)
+    timestampsRef.current.push(now)
+    setRateCount(timestampsRef.current.length)
+    if (timestampsRef.current.length >= RATE_LIMIT) {
+      const oldest = timestampsRef.current[0]
+      const resetIn = Math.ceil((oldest + RATE_WINDOW_MS - now) / 1000)
+      setTimeout(() => {
+        timestampsRef.current = timestampsRef.current.filter((t) => t > Date.now() - RATE_WINDOW_MS)
+        setRateCount(timestampsRef.current.length)
+      }, resetIn * 1000)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -26,10 +49,16 @@ export default function QuickCreateForm({ onShorten }: QuickCreateFormProps) {
       normalized = `https://${normalized}`
     }
 
+    if (isRateLimited) {
+      toast.error(`Rate limit reached. Wait a moment before creating more links.`)
+      return
+    }
+
     setLoading(true)
     setResult(null)
 
     try {
+      recordRequest()
       const shortUrl = await onShorten(normalized)
       setResult(shortUrl)
       setUrl("")
@@ -69,13 +98,20 @@ export default function QuickCreateForm({ onShorten }: QuickCreateFormProps) {
               disabled={loading}
             />
           </div>
-          <Button type="submit" disabled={loading || !url.trim()}>
+          <Button type="submit" disabled={loading || !url.trim() || isRateLimited}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isRateLimited ? (
+              <Clock className="h-4 w-4" />
             ) : (
               "Shorten"
             )}
           </Button>
+          {rateCount > 0 && (
+            <span className="text-xs text-muted-foreground tabular-nums self-center">
+              {RATE_LIMIT - rateCount}
+            </span>
+          )}
         </form>
 
         {result && (

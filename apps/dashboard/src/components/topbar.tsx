@@ -1,4 +1,6 @@
+import { useState, useEffect } from "react"
 import { useAuth } from "@/hooks/use-auth"
+import { getSubscription } from "@/lib/api"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import ThemeToggle from "@/components/theme-toggle"
@@ -14,8 +16,17 @@ import {
 import { LogOut } from "lucide-react"
 
 export default function Topbar() {
-  const { profile, signOut } = useAuth()
+  const { session, profile, signOut } = useAuth()
+  const token = session?.access_token ?? ""
   const breadcrumbs = useBreadcrumbs()
+  const [planName, setPlanName] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!token) return
+    getSubscription(token)
+      .then((data) => setPlanName(data.plan.planName))
+      .catch(() => {})
+  }, [token])
 
   const initials = profile?.email
     ? profile.email.charAt(0).toUpperCase()
@@ -28,9 +39,9 @@ export default function Topbar() {
       <div className="flex items-center gap-3">
         <ThemeToggle />
 
-        {profile?.role && (
+        {planName && (
           <Badge variant="secondary" className="hidden sm:inline-flex capitalize">
-            {profile.role}
+            {planName}
           </Badge>
         )}
 

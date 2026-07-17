@@ -243,6 +243,11 @@ export default function UrlSettingsPage() {
     }
   }
 
+  const openPurgeDialog = () => {
+    setPurgeConfirmCode("")
+    setPurgeDialog(true)
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -408,6 +413,11 @@ export default function UrlSettingsPage() {
                   <Lock className="h-3 w-3" />
                   Password protected
                 </Badge>
+                {urlInfo.passwordSetAt && (
+                  <span className="text-xs text-muted-foreground">
+                    Set {format(new Date(urlInfo.passwordSetAt), "MMM d, yyyy HH:mm")}
+                  </span>
+                )}
               </div>
               {passwordMode === "change" ? (
                 <div className="space-y-3 rounded-lg border border-border p-4">
@@ -540,7 +550,7 @@ export default function UrlSettingsPage() {
                 All visit data, QR codes, and associations will be permanently removed. Requires 2FA.
               </p>
             </div>
-            <Button variant="destructive" size="sm" onClick={() => setPurgeDialog(true)}>
+            <Button variant="destructive" size="sm" onClick={openPurgeDialog}>
               <ShieldOff className="mr-1.5 h-4 w-4" />
               Purge
             </Button>
@@ -575,6 +585,10 @@ export default function UrlSettingsPage() {
             <div className="flex items-start gap-2 rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
               <span>This will permanently delete this link and all associated visit data, QR codes, and associations. This action cannot be undone.</span>
+            </div>
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 text-sm text-amber-700 dark:text-amber-400">
+              <ShieldOff className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>Requires two-factor authentication (AAL2). Enable 2FA in your account security settings before proceeding.</span>
             </div>
             <p className="pt-2">
               Type <span className="font-mono font-medium text-foreground">{code}</span> to confirm:
