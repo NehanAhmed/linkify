@@ -1,5 +1,5 @@
 services:
-  app:
+  api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
@@ -17,6 +17,38 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+        VITE_APP_URL: http://localhost:5173
+        VITE_DASHBOARD_URL: http://localhost:5174
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: apps/dashboard/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000
+        VITE_APP_URL: http://localhost:5173
+        VITE_DASHBOARD_URL: http://localhost:5174
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    ports:
+      - "5174:5174"
+    depends_on:
+      - api
     restart: unless-stopped
 
   db:
