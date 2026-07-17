@@ -53,7 +53,8 @@ export default function PasswordInterstitialPage() {
 
     try {
       const { token } = await verifyUrlPassword(code, password)
-      window.location.href = `${import.meta.env.VITE_API_URL ?? "http://localhost:3000"}/${code}?token=${token}`
+      const base = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "")
+      window.location.href = `${base}/${code}?token=${token}`
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Something went wrong"
 
@@ -68,7 +69,8 @@ export default function PasswordInterstitialPage() {
       } else if (msg.includes("URL_NOT_FOUND")) {
         setStaticError({ title: "Link not found", description: "This short link doesn't exist." })
       } else if (msg.includes("NO_PASSWORD")) {
-        window.location.href = `${import.meta.env.VITE_API_URL ?? "http://localhost:3000"}/${code}`
+        const base = (import.meta.env.VITE_API_URL ?? "http://localhost:3000").replace(/\/+$/, "")
+        window.location.href = `${base}/${code}`
         return
       } else if (msg.includes("429") || msg.includes("Too many")) {
         setError({ message: "Too many attempts. Please wait.", variant: "password" })

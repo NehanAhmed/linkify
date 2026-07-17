@@ -22,7 +22,8 @@ import type {
   HealthResponse,
 } from "@linkify/shared"
 
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000"
+const RAW_API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000"
+const API_URL = RAW_API_URL.replace(/\/+$/, "")
 
 export class ApiError extends Error {
   code: string
