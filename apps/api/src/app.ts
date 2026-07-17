@@ -39,7 +39,7 @@ app.use(cookieParser())
 // Stripe webhook needs raw body — keep before express.json() and pino-http
 app.use('/api/stripe', stripeRoutes)
 
-app.use(express.json({ limit: '1mb' }))
+app.use(express.json())
 app.use(pinoHttp({ logger }))
 app.use('/api', generalLimiter)
 app.use('/api', csrfProtection)

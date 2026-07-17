@@ -204,6 +204,7 @@ export async function resolveChain(
     return resolveChain(row.url, depth + 1, visited)
   } catch (err) {
     if (err instanceof AppError) throw err
+    await validateUrlSafety(targetUrl)
     return targetUrl
   }
 }

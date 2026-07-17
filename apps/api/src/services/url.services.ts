@@ -102,7 +102,7 @@ export async function createShortUrl(input: CreateUrlInput, userId: string) {
   const activeAt = input.activeAt ? new Date(input.activeAt) : null
 
   if ((activeAt || expiresAt) && !isFeatureEnabled(FeatureFlag.ScheduledLinks)) {
-    throw new AppError('Scheduled links are not available on your plan', 403, 'FEATURE_NOT_AVAILABLE')
+    throw new AppError('Scheduled links are not available', 403, 'FEATURE_NOT_AVAILABLE')
   }
 
   const passwordHash = input.password ? await bcrypt.hash(input.password, 12) : null
