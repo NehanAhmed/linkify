@@ -7,6 +7,8 @@ import rateLimit from 'express-rate-limit'
 import pinoHttp from 'pino-http'
 import * as Sentry from '@sentry/node'
 import stripeRoutes from './routes/stripe.routes'
+import { generalLimiter } from './middleware/rateLimiter'
+import { csrfProtection } from './middleware/csrf'
 import routes from './routes'
 import { rootRedirect } from './controllers/url.controllers'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
@@ -33,9 +35,14 @@ app.use(helmet())
 app.use(cors({ origin: allowedOrigins }))
 app.use(compression())
 app.use(cookieParser())
-app.use(pinoHttp({ logger }))
+
+// Stripe webhook needs raw body — keep before express.json() and pino-http
 app.use('/api/stripe', stripeRoutes)
+
 app.use(express.json({ limit: '1mb' }))
+app.use(pinoHttp({ logger }))
+app.use('/api', generalLimiter)
+app.use('/api', csrfProtection)
 app.disable('x-powered-by')
 app.use(routes)
 

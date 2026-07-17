@@ -10,6 +10,7 @@ import { logAction } from './audit.service'
 import { cacheDel, buildCacheKeyForUrl } from './cache'
 import { getUserPlan } from './subscription.service'
 import { deleteAllQrCaches } from './url.services'
+import { validateUrlSafety } from './urlSafety'
 
 const LINK_CHAIN_MAX_HOPS = 5
 const JWT_SECRET = new TextEncoder().encode(env.LINK_ACCESS_SECRET)
@@ -170,7 +171,10 @@ export async function resolveChain(
   try {
     const parsed = new URL(targetUrl)
     const match = parsed.pathname.match(SHORT_URL_PATTERN)
-    if (!match) return targetUrl
+    if (!match) {
+      await validateUrlSafety(targetUrl)
+      return targetUrl
+    }
 
     const chainedCode = match[1]!
 

@@ -1,4 +1,4 @@
-import { BLOCKLIST_TLDS, BLOCKLIST_PATTERNS } from '../constants/blocklistDomains'
+import { BLOCKLIST_DOMAINS, BLOCKLIST_PATTERNS } from '../constants/blocklistDomains'
 import { AppError } from '../utils/AppError'
 import { lookup as dnsLookup } from 'dns/promises'
 import { isIP, isIPv4, isIPv6 } from 'net'
@@ -77,7 +77,7 @@ export async function validateUrlSafety(rawUrl: string): Promise<void> {
   }
 
   const domain = getDomain(hostname)
-  if (domain && BLOCKLIST_TLDS.has(domain)) {
+  if (domain && BLOCKLIST_DOMAINS.has(domain)) {
     throw new AppError('This domain has been blocked for security reasons', 400, 'BLOCKED_DOMAIN')
   }
 

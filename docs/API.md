@@ -50,8 +50,8 @@ Authorization: Bearer <api-key>
 
 All state-changing requests (`POST`, `PUT`, `PATCH`, `DELETE`) under `/api` require a CSRF token **unless** using Bearer auth.
 
-1. `GET /api/auth/csrf-token` → receive `{ token: "..." }`
-2. `Set-Cookie: csrf-token=<signed>` (httpOnly, sameSite=strict)
+1. `GET /api/auth/csrf-token` → receive `{ success: true, data: { token: "..." } }`
+2. A `__Host-linkify.x-csrf-token` cookie is set automatically (httpOnly, sameSite=strict, secure in production)
 3. Include header: `x-csrf-token: <token from step 1>`
 
 ### AAL2 / Two-Factor Authentication

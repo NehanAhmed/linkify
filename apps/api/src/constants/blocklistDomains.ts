@@ -1,4 +1,4 @@
-export const BLOCKLIST_TLDS = new Set([
+export const BLOCKLIST_DOMAINS = new Set([
   // Known phishing/malware domains — this is a minimal starter set
   // In production, integrate with Google Safe Browsing or a blocklist API
   'bit.ly',
